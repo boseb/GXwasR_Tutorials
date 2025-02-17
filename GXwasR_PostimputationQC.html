@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="By Banabithi Bose, Northwestern University" />
+
+
+<title>Sex-aware Post-impute Quality Control Pipeline Using GXwasR</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Sex-aware Post-impute Quality Control
+Pipeline Using GXwasR</h1>
+<h4 class="author">By Banabithi Bose, Northwestern University</h4>
+<h4 class="date">1/14/2024</h4>
+
+
+
+<p>This document outlines the sex-aware post-imputation quality control
+(QC) steps, which represent our recommended best practices. Users have
+the flexibility to create their own pipelines using the GXwasR functions
+based on their specific needs.</p>
+<div id="sex-aware-post-imputation-qc-pipeline" class="section level2">
+<h2>Sex-aware Post-imputation QC pipeline:</h2>
+<p>We will run the post-imputation QC pipeline in this vignette
+utilizing the functions from GXwasR package.</p>
+</div>
+<div id="example-datasets" class="section level2">
+<h2>Example Datasets</h2>
+<p>The PLINK bed, bim, and fam files are the three mandatory files
+representing a genotype dataset to run this pipeline. To know about
+these file extensions, please check <a href="https://www.cog-genomics.org/plink/1.9/formats" class="uri">https://www.cog-genomics.org/plink/1.9/formats</a>.</p>
+<p><strong>GXwasR_example:</strong></p>
+<p>GXwasR_example.bed</p>
+<p>GXwasR_example.bim</p>
+<p>GXwasR_example.fam</p>
+<p>These plink files contain genotypes for 276 individuals (males and
+females) simulated from 1000Genome from European decent with 26515
+variants across twelve chromosomes (1-10,23,24). This dataset contains
+125 males, 151 females, 108 cases and 168 controls. We will utilize this
+set of plink files as proxy of pre-imputated genotype data.</p>
+</div>
+<div id="post-imputation-qc-steps" class="section level2">
+<h2>Post-imputation QC steps</h2>
+<p>-<strong>(A) Sex-combined QC:</strong> 1.Remove SNPs with IMPUTE2
+info score &lt; 0.6 and certainty &lt; 0.8 This part should be done in
+the imputation server with the VCF files.</p>
+<p>-<strong>(B) Sex-specific autosomal QC at the variant level:</strong>
+1.Filter PAR, XTR, Ampliconic regions from the X-chromosome and combine
+with autosomes for autosomal QC. 2.Any SNPs in the controls with a sex
+difference in MAF should be carefully examined and flagged for further
+examination, since the differences may be due to technical confounding
+or sampling biases for the study cohorts 3.Prepare separate male and
+female subsets of the genotypes 4.Remove SNPs with MAF &lt; 0.05 from
+each sex</p>
+<p>-<strong>(C) Sex-specific X-chromosomal QC at the variant
+level:</strong> 1.Separate PAR, XTR, Ampliconic regions from the
+X-chromosome 2.Prepare separate male and female subsets of the genotypes
+3.Remove SNPs with a missingness difference in cases vs controls,
+separately in each sex 4.In each sex, filter out SNPs based on 1% MAF,
+10% missingness per individual, and 5% missingness per genotype. We
+recommend setting the threshold filters to be the same in males and
+females for analyses of common variants. 5.Identify the set of SNPs
+found in both of the post-QC male and female datasets and create a
+combined dataset with only these SNPs 6.Testing for HWE across the X in
+females (cases and controls combined), and later removing these regions
+from analysis in all samples. If assuming equal allele frequency between
+males and females, HWE for chrX can be considered in females only as
+described in Khramatsova et. al., 2023. 7.Test for significantly
+different MAF (p &lt; 0.05/#SNPs) between sexes in control samples only
+for binary traits. ChrX variants with MAF sex differences in controls
+may be biologically meaningful, one could consider flagging these
+variants rather than removing them (Khramatsova et. al., 2023.)</p>
+<p>-<strong>(D) Sex-specific QC at sample level: Filter samples
+if:</strong> 1.Remove individual with missing genotype rate &gt; 0.1
+2.Remove individual with the absolute value of the heterozygosity F
+statistic &gt; 0.20 3.Remove pair of individuals with IBD statistics
+pihat &gt; 0.2.</p>
+</div>
+<div id="loading-the-gxwasr-library" class="section level2">
+<h2>Loading the GXwasR library</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="do">## Call some libraries</span></span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">library</span>(GXwasR)</span></code></pre></div>
+<pre><code>## 
+## GXwasR: Genome-wide and x-chromosome wide association analyses applying
+## best practices of quality control over genetic data</code></pre>
+<pre><code>## Version 0.7.0 () installed</code></pre>
+<pre><code>## Author: Banabithi Bose [aut, cre] (&lt;https://orcid.org/0000-0003-0842-8768&gt;)</code></pre>
+<pre><code>## Maintainer: Banabithi Bose &lt;banabithi.bose@gmail.com&gt;</code></pre>
+<pre><code>## Tutorial: https://github.com</code></pre>
+<pre><code>## Use citation(&quot;GXwasR&quot;) to know how to cite this work.</code></pre>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">library</span>(printr)</span></code></pre></div>
+<pre><code>## Registered S3 method overwritten by &#39;printr&#39;:
+##   method                from     
+##   knit_print.data.frame rmarkdown</code></pre>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="fu">library</span>(rmarkdown)</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="do">## Load the example .Rda files</span></span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;GXwasRData&quot;</span>)</span></code></pre></div>
+</div>
+<div id="learn-about-all-the-gxwasr-functions" class="section level2">
+<h2>Learn about all the GXwasR functions</h2>
+<p><strong>Before beginning the pre-imputation quality control (QC), it
+is recommended that users familiarize themselves with all the functions
+in the GXwasR package. This knowledge will help them understand the
+required input arguments, how to execute the functions, and what outputs
+to expect.</strong></p>
+<p>To explore all available functions, users should first load the
+GXwasR library and then use the browseVignettes() function:</p>
+<p>library(GXwasR)</p>
+<p>browseVignettes(“GXwasR”)</p>
+</div>
+<div id="post-imputation-qc-pipeline" class="section level2">
+<h2>Post-imputation QC pipeline</h2>
+<p>We will use plink binary files from DataDir, prefixed as
+“GXwasR_example” for the input of the post-imputation QC functions and
+cosidered that the SNPs are passed IMPUTE2 info score &lt; 0.6 and
+certainty &lt; 0.8.</p>
+</div>
+<div id="example-dataset-summary" class="section level2">
+<h2>Example Dataset Summary</h2>
+<p><strong>Dataset: GXwasR_example</strong></p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a>DataDir <span class="ot">&lt;-</span> <span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="at">package =</span> <span class="st">&quot;GXwasR&quot;</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>ResultDir <span class="ot">&lt;-</span> <span class="fu">tempdir</span>()</span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a>finput <span class="ot">&lt;-</span> <span class="st">&quot;GXwasR_example&quot;</span></span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">PlinkSummary</span>(DataDir, ResultDir, finput)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;Dataset:GXwasR_example&quot;
+## [1] &quot;Number of missing phenotypes:0&quot;
+## [1] &quot;Number of males:125&quot;
+## [1] &quot;Number of females:151&quot;
+## [1] &quot;This is a case-control data.&quot;
+## [1] &quot;Number of cases:108&quot;
+## [1] &quot;Number of controls:168&quot;
+## [1] &quot;Number of cases in males:53&quot;
+## [1] &quot;Number of controls in males:72&quot;
+## [1] &quot;Number of cases in females:55&quot;
+## [1] &quot;Number of controls in females:96&quot;
+## [1] &quot;Number of chromosomes:12&quot;
+##  [1] &quot;Chr:1&quot;  &quot;Chr:2&quot;  &quot;Chr:3&quot;  &quot;Chr:4&quot;  &quot;Chr:5&quot;  &quot;Chr:6&quot;  &quot;Chr:7&quot;  &quot;Chr:8&quot; 
+##  [9] &quot;Chr:9&quot;  &quot;Chr:10&quot; &quot;Chr:23&quot; &quot;Chr:24&quot;
+## [1] &quot;Total number of SNPs:26527&quot;
+## [1] &quot;Total number of samples:276&quot;</code></pre>
+</div>
+<div id="step1-filtering-multi-allelic-variants" class="section level2">
+<h2>Step1: Filtering multi-allelic variants</h2>
+<p>GXwasR cannot work with multi-allelic variants</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a>foutput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_QC&quot;</span></span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">FilterAllele</span>(DataDir, ResultDir, finput, foutput)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;There is no multi-allelic SNP present in the input dataset.&quot;</code></pre>
+<p>Since there is no multi-allelic SNPs, proceed with the same input
+dataset.</p>
+</div>
+<div id="step-2-filtering-ambiguous-snps-indels-and-snps-failed-for-hwe" class="section level2">
+<h2>Step 2: Filtering Ambiguous SNPs, indels and SNPs failed for
+HWE</h2>
+<p>For this we will use QCsnp() blocking all other filtering. The
+function will implicitly perform filtering based on ambiguos SNPs.</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a>finput <span class="ot">&lt;-</span> <span class="st">&quot;GXwasR_example&quot;</span></span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a>foutput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_QC1&quot;</span></span>
+<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a>geno <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
+<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a>maf <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
+<span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a>casecontrol <span class="ot">&lt;-</span> <span class="cn">FALSE</span></span>
+<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a>hweCase <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
+<span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a>hweCase <span class="ot">&lt;-</span> <span class="fl">1e-10</span></span>
+<span id="cb15-8"><a href="#cb15-8" tabindex="-1"></a>hweControl <span class="ot">&lt;-</span> <span class="fl">1e-06</span></span>
+<span id="cb15-9"><a href="#cb15-9" tabindex="-1"></a>monomorphicSNPs <span class="ot">&lt;-</span> <span class="cn">FALSE</span></span>
+<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a>caldiffmiss <span class="ot">&lt;-</span> <span class="cn">FALSE</span></span>
+<span id="cb15-11"><a href="#cb15-11" tabindex="-1"></a>ld_prunning <span class="ot">&lt;-</span> <span class="cn">FALSE</span></span>
+<span id="cb15-12"><a href="#cb15-12" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">QCsnp</span>(<span class="at">DataDir =</span> DataDir, <span class="at">ResultDir =</span> ResultDir, <span class="at">finput =</span> finput,<span class="at">foutput =</span> foutput, <span class="at">geno =</span> geno, <span class="at">maf =</span> maf,<span class="at">hweCase =</span> hweCase, <span class="at">hweControl =</span> hweControl, <span class="at">ld_prunning =</span> ld_prunning, <span class="at">casecontrol =</span> casecontrol, <span class="at">monomorphicSNPs =</span> monomorphicSNPs, <span class="at">caldiffmiss =</span> caldiffmiss)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;4214 Ambiguous SNPs (A-T/G-C), indels etc. were removed.&quot;
+## [1] &quot;Thresholds for maf, geno and hwe worked.&quot;
+## character(0)
+## [1] &quot;There are no monomorphic SNPs.&quot;
+## [1] &quot;No filter based on differential missingness will be applied.&quot;
+## [1] &quot;Output plink files prefixed as ,PostimputeEX_QC1, with passed SNPs are saved in ResultDir.&quot;
+## [1] &quot;Input file has 26527 SNPs.&quot;
+## [1] &quot;Output file has 22313 SNPs after filtering.&quot;</code></pre>
+<p>Copying the plink files from ResultDir to DataDir.</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;PostimputeEX_QC1&quot;</span>)</span>
+<span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a><span class="fu">file.copy</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>,ftemp),DataDir)</span></code></pre></div>
+<pre><code>## [1] TRUE TRUE TRUE TRUE</code></pre>
+</div>
+<div id="step-3-flag-par-xtr-and-ampliconic-regions" class="section level2">
+<h2>Step 3: Flag PAR, XTR and Ampliconic Regions</h2>
+<p>Now, we will filter Pseudo-Autosomal Region (PAR), X-transposed
+region (XTR) and Ampliconic regions from the X-chromosome and will
+combine these regions with autosomes for autosomal QC.</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" tabindex="-1"></a><span class="co"># Running</span></span>
+<span id="cb19-2"><a href="#cb19-2" tabindex="-1"></a>finput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_QC1&quot;</span></span>
+<span id="cb19-3"><a href="#cb19-3" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">PlinkSummary</span>(DataDir, ResultDir, finput)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;Dataset:PostimputeEX_QC1&quot;
+## [1] &quot;Number of missing phenotypes:0&quot;
+## [1] &quot;Number of males:125&quot;
+## [1] &quot;Number of females:151&quot;
+## [1] &quot;This is a case-control data.&quot;
+## [1] &quot;Number of cases:108&quot;
+## [1] &quot;Number of controls:168&quot;
+## [1] &quot;Number of cases in males:53&quot;
+## [1] &quot;Number of controls in males:72&quot;
+## [1] &quot;Number of cases in females:55&quot;
+## [1] &quot;Number of controls in females:96&quot;
+## [1] &quot;Number of chromosomes:12&quot;
+##  [1] &quot;Chr:1&quot;  &quot;Chr:2&quot;  &quot;Chr:3&quot;  &quot;Chr:4&quot;  &quot;Chr:5&quot;  &quot;Chr:6&quot;  &quot;Chr:7&quot;  &quot;Chr:8&quot; 
+##  [9] &quot;Chr:9&quot;  &quot;Chr:10&quot; &quot;Chr:23&quot; &quot;Chr:24&quot;
+## [1] &quot;Total number of SNPs:22313&quot;
+## [1] &quot;Total number of samples:276&quot;</code></pre>
+<div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" tabindex="-1"></a>foutput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_QC2_Dummy&quot;</span></span>
+<span id="cb21-2"><a href="#cb21-2" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">FilterRegion</span>(<span class="at">DataDir =</span> DataDir,<span class="at">ResultDir =</span> ResultDir,<span class="at">finput =</span> finput,<span class="at">foutput =</span> foutput,<span class="at">CHRX =</span> <span class="cn">TRUE</span>,<span class="at">CHRY =</span> <span class="cn">FALSE</span>, <span class="at">filterPAR =</span> <span class="cn">TRUE</span>,<span class="at">filterXTR =</span> <span class="cn">TRUE</span>,<span class="at">filterAmpliconic =</span> <span class="cn">TRUE</span>,<span class="at">regionfile =</span> <span class="cn">FALSE</span>,<span class="at">filterCHR =</span> <span class="cn">NULL</span>, <span class="at">Hg =</span> <span class="st">&quot;38&quot;</span>,<span class="at">exclude =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;line 3491&quot;
+## [1] &quot;chrX&quot;
+## [1] &quot;There is no PAR region in the input data. Argument filterPAR cannot set to be TRUE.&quot;
+## [1] &quot;Changing it as filterPAR = FALSE&quot;
+## [1] &quot;XTR SNPs:37&quot;
+## [1] &quot;Ampliconic SNPs:8&quot;
+## [1] &quot;SNPs are only flagged for the desired region.&quot;</code></pre>
+<div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" tabindex="-1"></a>XTR_SNPs <span class="ot">&lt;-</span> x<span class="sc">$</span>XTR</span>
+<span id="cb23-2"><a href="#cb23-2" tabindex="-1"></a>Ampli_SNPs <span class="ot">&lt;-</span> x<span class="sc">$</span>Ampliconic</span>
+<span id="cb23-3"><a href="#cb23-3" tabindex="-1"></a>PAR_SNPs <span class="ot">&lt;-</span> x<span class="sc">$</span>PAR</span>
+<span id="cb23-4"><a href="#cb23-4" tabindex="-1"></a><span class="fu">save</span>(XTR_SNPs, <span class="at">file =</span> <span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/Postimpute_XTR_SNPs.Rda&quot;</span>))</span>
+<span id="cb23-5"><a href="#cb23-5" tabindex="-1"></a><span class="fu">save</span>(Ampli_SNPs, <span class="at">file =</span> <span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/Postimpute_Ampli_SNPs.Rda&quot;</span>))</span>
+<span id="cb23-6"><a href="#cb23-6" tabindex="-1"></a><span class="fu">save</span>(PAR_SNPs, <span class="at">file =</span> <span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/Postimpute_PAR_SNPs.Rda&quot;</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" tabindex="-1"></a><span class="co"># Output</span></span>
+<span id="cb24-2"><a href="#cb24-2" tabindex="-1"></a><span class="co"># SNPs in PAR</span></span>
+<span id="cb24-3"><a href="#cb24-3" tabindex="-1"></a>PAR_SNPs <span class="ot">&lt;-</span> x<span class="sc">$</span>PAR <span class="do">## No PAR SNP</span></span>
+<span id="cb24-4"><a href="#cb24-4" tabindex="-1"></a><span class="co"># SNPs in XTR</span></span>
+<span id="cb24-5"><a href="#cb24-5" tabindex="-1"></a>XTR_SNPs <span class="ot">&lt;-</span> x<span class="sc">$</span>XTR <span class="do">## 42 SNPs</span></span>
+<span id="cb24-6"><a href="#cb24-6" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(XTR_SNPs, <span class="at">caption =</span> <span class="st">&#39;SNPs in XTR.&#39;</span>)</span></code></pre></div>
+<table>
+<caption>SNPs in XTR.</caption>
+<thead>
+<tr class="header">
+<th align="right">CHR</th>
+<th align="left">SNP</th>
+<th align="right">START</th>
+<th align="right">END</th>
+<th align="left">A1</th>
+<th align="left">A2</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">23</td>
+<td align="left">rs112780345</td>
+<td align="right">0</td>
+<td align="right">89417637</td>
+<td align="left">T</td>
+<td align="left">C</td>
+</tr>
+<tr class="even">
+<td align="right">23</td>
+<td align="left">rs6618319</td>
+<td align="right">0</td>
+<td align="right">89445417</td>
+<td align="left">A</td>
+<td align="left">G</td>
+</tr>
+<tr class="odd">
+<td align="right">23</td>
+<td align="left">rs6615136</td>
+<td align="right">0</td>
+<td align="right">89566190</td>
+<td align="left">T</td>
+<td align="left">C</td>
+</tr>
+<tr class="even">
+<td align="right">23</td>
+<td align="left">rs5984023</td>
+<td align="right">0</td>
+<td align="right">89598361</td>
+<td align="left">G</td>
+<td align="left">A</td>
+</tr>
+<tr class="odd">
+<td align="right">23</td>
+<td align="left">rs72619623</td>
+<td align="right">0</td>
+<td align="right">89615757</td>
+<td align="left">G</td>
+<td align="left">T</td>
+</tr>
+<tr class="even">
+<td align="right">23</td>
+<td align="left">rs6618422</td>
+<td align="right">0</td>
+<td align="right">89625041</td>
+<td align="left">T</td>
+<td align="left">C</td>
+</tr>
+<tr class="odd">
+<td align="right">23</td>
+<td align="left">rs113049863</td>
+<td align="right">0</td>
+<td align="right">89679199</td>
+<td align="left">A</td>
+<td align="left">G</td>
+</tr>
+<tr class="even">
+<td align="right">23</td>
+<td align="left">rs57541725</td>
+<td align="right">0</td>
+<td align="right">89740689</td>
+<td align="left">C</td>
+<td align="left">T</td>
+</tr>
+<tr class="odd">
+<td align="right">23</td>
+<td align="left">rs6652564</td>
+<td align="right">0</td>
+<td align="right">89821739</td>
+<td align="left">A</td>
+<td align="left">G</td>
+</tr>
+<tr class="even">
+<td align="right">23</td>
+<td align="left">rs2351410</td>
+<td align="right">0</td>
+<td align="right">89840744</td>
+<td align="left">C</td>
+<td align="left">T</td>
+</tr>
+<tr class="odd">
+<td align="right">23</td>
+<td align="left">rs180858362</td>
+<td align="right">0</td>
+<td align="right">90197271</td>
+<td align="left">A</td>
+<td align="left">G</td>
+</tr>
+<tr class="even">
+<td align="right">23</td>
+<td align="left">rs78894385</td>
+<td align="right">0</td>
+<td align="right">90281084</td>
+<td align="left">C</td>
+<td align="left">T</td>
+</tr>
+<tr class="odd">
+<td align="right">23</td>
+<td align="left">rs148246631</td>
+<td align="right">0</td>
+<td align="right">90319970</td>
+<td align="left">C</td>
+<td align="left">T</td>
+</tr>
+<tr class="even">
+<td align="right">23</td>
+<td align="left">rs145315212</td>
+<td align="right">0</td>
+<td align="right">90587079</td>
+<td align="left">T</td>
+<td align="left">G</td>
+</tr>
+<tr class="odd">
+<td align="right">23</td>
+<td align="left">rs138165690</td>
+<td align="right">0</td>
+<td align="right">90606073</td>
+<td align="left">G</td>
+<td align="left">A</td>
+</tr>
+<tr class="even">
+<td align="right">23</td>
+<td align="left">rs112372900</td>
+<td align="right">0</td>
+<td align="right">90609268</td>
+<td align="left">A</td>
+<td align="left">G</td>
+</tr>
+<tr class="odd">
+<td align="right">23</td>
+<td align="left">rs148175424</td>
+<td align="right">0</td>
+<td align="right">90819967</td>
+<td align="left">G</td>
+<td align="left">A</td>
+</tr>
+<tr class="even">
+<td align="right">23</td>
+<td align="left">rs184974812</td>
+<td align="right">0</td>
+<td align="right">90961333</td>
+<td align="left">T</td>
+<td align="left">C</td>
+</tr>
+<tr class="odd">
+<td align="right">23</td>
+<td align="left">rs3102677</td>
+<td align="right">0</td>
+<td align="right">90966467</td>
+<td align="left">A</td>
+<td align="left">C</td>
+</tr>
+<tr class="even">
+<td align="right">23</td>
+<td align="left">rs4893300</td>
+<td align="right">0</td>
+<td align="right">91325789</td>
+<td align="left">T</td>
+<td align="left">C</td>
+</tr>
+<tr class="odd">
+<td align="right">23</td>
+<td align="left">rs139368244</td>
+<td align="right">0</td>
+<td align="right">91466056</td>
+<td align="left">A</td>
+<td align="left">G</td>
+</tr>
+<tr class="even">
+<td align="right">23</td>
+<td align="left">rs150576690</td>
+<td align="right">0</td>
+<td align="right">91535358</td>
+<td align="left">G</td>
+<td align="left">A</td>
+</tr>
+<tr class="odd">
+<td align="right">23</td>
+<td align="left">rs147751417</td>
+<td align="right">0</td>
+<td align="right">91546174</td>
+<td align="left">A</td>
+<td align="left">G</td>
+</tr>
+<tr class="even">
+<td align="right">23</td>
+<td align="left">rs12559487</td>
+<td align="right">0</td>
+<td align="right">91564660</td>
+<td align="left">C</td>
+<td align="left">T</td>
+</tr>
+<tr class="odd">
+<td align="right">23</td>
+<td align="left">rs5942238</td>
+<td align="right">0</td>
+<td align="right">91661985</td>
+<td align="left">C</td>
+<td align="left">T</td>
+</tr>
+<tr class="even">
+<td align="right">23</td>
+<td align="left">rs2750724</td>
+<td align="right">0</td>
+<td align="right">91708657</td>
+<td align="left">A</td>
+<td align="left">C</td>
+</tr>
+<tr class="odd">
+<td align="right">23</td>
+<td align="left">rs149990487</td>
+<td align="right">0</td>
+<td align="right">91778560</td>
+<td align="left">T</td>
+<td align="left">C</td>
+</tr>
+<tr class="even">
+<td align="right">23</td>
+<td align="left">rs72608332</td>
+<td align="right">0</td>
+<td align="right">91810408</td>
+<td align="left">A</td>
+<td align="left">C</td>
+</tr>
+<tr class="odd">
+<td align="right">23</td>
+<td align="left">rs4020239</td>
+<td align="right">0</td>
+<td align="right">92033080</td>
+<td align="left">A</td>
+<td align="left">G</td>
+</tr>
+<tr class="even">
+<td align="right">23</td>
+<td align="left">rs112758789</td>
+<td align="right">0</td>
+<td align="right">92128923</td>
+<td align="left">G</td>
+<td align="left">A</td>
+</tr>
+<tr class="odd">
+<td align="right">23</td>
+<td align="left">rs5940058</td>
+<td align="right">0</td>
+<td align="right">92501396</td>
+<td align="left">T</td>
+<td align="left">C</td>
+</tr>
+<tr class="even">
+<td align="right">23</td>
+<td align="left">rs7063612</td>
+<td align="right">0</td>
+<td align="right">92688979</td>
+<td align="left">G</td>
+<td align="left">A</td>
+</tr>
+<tr class="odd">
+<td align="right">23</td>
+<td align="left">rs6619327</td>
+<td align="right">0</td>
+<td align="right">92701390</td>
+<td align="left">T</td>
+<td align="left">C</td>
+</tr>
+<tr class="even">
+<td align="right">23</td>
+<td align="left">rs5940201</td>
+<td align="right">0</td>
+<td align="right">92704286</td>
+<td align="left">T</td>
+<td align="left">C</td>
+</tr>
+<tr class="odd">
+<td align="right">23</td>
+<td align="left">rs7471791</td>
+<td align="right">0</td>
+<td align="right">92755626</td>
+<td align="left">A</td>
+<td align="left">C</td>
+</tr>
+<tr class="even">
+<td align="right">23</td>
+<td align="left">rs6619376</td>
+<td align="right">0</td>
+<td align="right">92849353</td>
+<td align="left">G</td>
+<td align="left">A</td>
+</tr>
+<tr class="odd">
+<td align="right">23</td>
+<td align="left">rs5939896</td>
+<td align="right">0</td>
+<td align="right">93359947</td>
+<td align="left">C</td>
+<td align="left">T</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" tabindex="-1"></a><span class="co"># SNPs in Ampliconic region</span></span>
+<span id="cb25-2"><a href="#cb25-2" tabindex="-1"></a>Ampliconic_SNPs <span class="ot">&lt;-</span> x<span class="sc">$</span>Ampliconic <span class="co"># 7 SNPs</span></span>
+<span id="cb25-3"><a href="#cb25-3" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(Ampliconic_SNPs, <span class="at">caption =</span> <span class="st">&#39;SNPs in Ampliconic region.&#39;</span>)</span></code></pre></div>
+<table>
+<caption>SNPs in Ampliconic region.</caption>
+<thead>
+<tr class="header">
+<th align="right">CHR</th>
+<th align="left">SNP</th>
+<th align="right">START</th>
+<th align="right">END</th>
+<th align="left">A1</th>
+<th align="left">A2</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">23</td>
+<td align="left">rs62602496</td>
+<td align="right">0</td>
+<td align="right">48349540</td>
+<td align="left">G</td>
+<td align="left">A</td>
+</tr>
+<tr class="even">
+<td align="right">23</td>
+<td align="left">rs6612314</td>
+<td align="right">0</td>
+<td align="right">55442087</td>
+<td align="left">A</td>
+<td align="left">C</td>
+</tr>
+<tr class="odd">
+<td align="right">23</td>
+<td align="left">rs151231489</td>
+<td align="right">0</td>
+<td align="right">55445831</td>
+<td align="left">C</td>
+<td align="left">A</td>
+</tr>
+<tr class="even">
+<td align="right">23</td>
+<td align="left">rs73498395</td>
+<td align="right">0</td>
+<td align="right">71740842</td>
+<td align="left">T</td>
+<td align="left">C</td>
+</tr>
+<tr class="odd">
+<td align="right">23</td>
+<td align="left">rs6527</td>
+<td align="right">0</td>
+<td align="right">73066891</td>
+<td align="left">A</td>
+<td align="left">C</td>
+</tr>
+<tr class="even">
+<td align="right">23</td>
+<td align="left">rs4907822</td>
+<td align="right">0</td>
+<td align="right">102264099</td>
+<td align="left">A</td>
+<td align="left">G</td>
+</tr>
+<tr class="odd">
+<td align="right">23</td>
+<td align="left">rs142219143</td>
+<td align="right">0</td>
+<td align="right">102354248</td>
+<td align="left">G</td>
+<td align="left">A</td>
+</tr>
+<tr class="even">
+<td align="right">23</td>
+<td align="left">rs139353379</td>
+<td align="right">0</td>
+<td align="right">103970756</td>
+<td align="left">G</td>
+<td align="left">A</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Note: We will not perform step 4, since we do not have any
+PAR regions. The steps are provided for the users in the case if they
+have PAR regions in their dataset.</strong></p>
+</div>
+<div id="step-4-filter-only-par-regions-from-x-chromosome" class="section level2">
+<h2>Step 4: Filter only PAR Regions from X-chromosome</h2>
+<div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" tabindex="-1"></a><span class="co"># Not Running</span></span>
+<span id="cb26-2"><a href="#cb26-2" tabindex="-1"></a><span class="co"># finput &lt;- &quot;PostimputeEX_QC1&quot;</span></span>
+<span id="cb26-3"><a href="#cb26-3" tabindex="-1"></a><span class="co"># x &lt;- PlinkSummary(DataDir, ResultDir, finput)</span></span>
+<span id="cb26-4"><a href="#cb26-4" tabindex="-1"></a><span class="co"># foutput &lt;- &quot;PostimputeEX_QC2&quot;</span></span>
+<span id="cb26-5"><a href="#cb26-5" tabindex="-1"></a><span class="co"># x &lt;- FilterRegion(DataDir = DataDir,ResultDir = ResultDir,finput = finput,foutput = foutput,CHRX = TRUE,CHRY = FALSE, filterPAR = TRUE,filterXTR = FALSE,filterAmpliconic = FALSE,regionfile = FALSE,filterCHR = NULL, Hg = &quot;38&quot;,exclude = TRUE)</span></span></code></pre></div>
+<p>Now, users need to move the QC-ed files (i.e., “PostimputeEX_QC2” and
+“PostimputeEX_QC2_snps_extracted”) to DataDir to be used as input
+datasets for the next step of the pipeline.</p>
+<p>Copying the plink files from ResultDir to DataDir.</p>
+<div class="sourceCode" id="cb27"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;PostimputeEX_QC2&quot;</span>)</span>
+<span id="cb27-2"><a href="#cb27-2" tabindex="-1"></a><span class="fu">file.copy</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>,ftemp),DataDir)</span></code></pre></div>
+<pre><code>## [1] FALSE</code></pre>
+</div>
+<div id="step-5-preparing-autosomal-and-x-chromosomal-plink-binary-files" class="section level2">
+<h2>Step 5: Preparing autosomal and X-chromosomal plink binary
+files</h2>
+<p>Now, we will prepare two sets of plink binary files from
+“PostimputeEX_QC1” containing autosomes and X-chromosomes, respectively.
+For this purpose, we will again use FilterRegion().</p>
+<div class="sourceCode" id="cb29"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" tabindex="-1"></a>finput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_QC1&quot;</span></span>
+<span id="cb29-2"><a href="#cb29-2" tabindex="-1"></a>foutput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_QC3&quot;</span></span>
+<span id="cb29-3"><a href="#cb29-3" tabindex="-1"></a></span>
+<span id="cb29-4"><a href="#cb29-4" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">FilterRegion</span>(<span class="at">DataDir =</span> DataDir,<span class="at">ResultDir =</span> ResultDir,<span class="at">finput =</span> finput,<span class="at">foutput =</span> foutput,<span class="at">CHRX =</span> <span class="cn">FALSE</span>,<span class="at">CHRY =</span> <span class="cn">FALSE</span>, <span class="at">filterPAR =</span> <span class="cn">FALSE</span>,<span class="at">filterXTR =</span> <span class="cn">FALSE</span>,<span class="at">filterAmpliconic =</span> <span class="cn">FALSE</span>,<span class="at">regionfile =</span> <span class="cn">FALSE</span>,<span class="at">filterCHR =</span> <span class="dv">23</span>, <span class="at">Hg =</span> <span class="st">&quot;38&quot;</span>,<span class="at">exclude =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;</code></pre>
+<p>“PostimputeEX_QC3_snps_extracted” contains X-chromosome, while
+“PostimputeEX_QC3” contains autosomal SNPs.</p>
+<div class="sourceCode" id="cb31"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" tabindex="-1"></a><span class="co">#Now, copying these files to DataDir.</span></span>
+<span id="cb31-2"><a href="#cb31-2" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;PostimputeEX_QC3&quot;</span>)</span>
+<span id="cb31-3"><a href="#cb31-3" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.copy</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>,ftemp),DataDir))</span></code></pre></div>
+<p><strong>Note: We will not perform step 6, since we do not have any
+PAR regions. The steps are provided for the users in the case if they
+have PAR regions in their dataset.</strong></p>
+</div>
+<div id="step-6-merging-the-autosomal-regions-with-par-regions" class="section level2">
+<h2>Step 6: Merging the autosomal regions with PAR regions</h2>
+<p>We will now merge the autosomal files with PAR regions using
+MergeRegion().</p>
+<div class="sourceCode" id="cb32"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" tabindex="-1"></a><span class="do">## Not running</span></span>
+<span id="cb32-2"><a href="#cb32-2" tabindex="-1"></a><span class="co"># finput1 &lt;- &quot;PostimputeEX_QC3&quot;</span></span>
+<span id="cb32-3"><a href="#cb32-3" tabindex="-1"></a><span class="co"># finput2 &lt;- &quot;PostimputeEX_QC2_snps_extracted&quot;</span></span>
+<span id="cb32-4"><a href="#cb32-4" tabindex="-1"></a><span class="co"># foutput &lt;- &quot;PostimputeEX_QC3_autopar&quot;</span></span>
+<span id="cb32-5"><a href="#cb32-5" tabindex="-1"></a><span class="co"># y &lt;- MergeRegion(DataDir, ResultDir, finput1, finput2, foutput, use_common_snps = FALSE)</span></span>
+<span id="cb32-6"><a href="#cb32-6" tabindex="-1"></a><span class="co"># ## Copying the files to DataDir</span></span>
+<span id="cb32-7"><a href="#cb32-7" tabindex="-1"></a><span class="co"># ftemp &lt;- list.files(paste0(ResultDir,&quot;/&quot;),pattern = &quot;PostimputeEX_QC3_autopar&quot;)</span></span>
+<span id="cb32-8"><a href="#cb32-8" tabindex="-1"></a><span class="co"># invisible(file.copy(paste0(ResultDir,&quot;/&quot;,ftemp),DataDir))</span></span></code></pre></div>
+<p>With “PostimputeEX_QC3”, we will flag the SNPs in the controls with a
+sex difference in MAF, since the differences may be due to technical
+confounding or sampling biases for the study cohorts.</p>
+</div>
+<div id="step-7-flag-the-snps-in-the-controls-with-a-sex-difference-in-maf" class="section level2">
+<h2>Step 7: Flag the SNPs in the controls with a sex difference in
+MAF</h2>
+<div class="sourceCode" id="cb33"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" tabindex="-1"></a>finput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_QC3&quot;</span></span>
+<span id="cb33-2"><a href="#cb33-2" tabindex="-1"></a>foutput <span class="ot">&lt;-</span> <span class="st">&quot;Test_output&quot;</span></span>
+<span id="cb33-3"><a href="#cb33-3" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">MAFdiffSexControl</span>(DataDir, ResultDir, finput,foutput, <span class="at">filterSNP =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;No SNP to be flagged or excluded.&quot;</code></pre>
+<p>Since no SNP is having MAF difference in sexes in controls, we will
+proceed to the next steps of the pipeline.</p>
+</div>
+<div id="step-8-prepare-separate-male-and-female-subsets-of-the-genotypes." class="section level2">
+<h2>Step 8: Prepare separate male and female subsets of the
+genotypes.</h2>
+<div class="sourceCode" id="cb35"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" tabindex="-1"></a>finput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_QC3&quot;</span></span>
+<span id="cb35-2"><a href="#cb35-2" tabindex="-1"></a>foutput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_QC4_Female&quot;</span></span>
+<span id="cb35-3"><a href="#cb35-3" tabindex="-1"></a>sex <span class="ot">&lt;-</span> <span class="st">&quot;females&quot;</span></span>
+<span id="cb35-4"><a href="#cb35-4" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">GetMFPlink</span>(<span class="at">DataDir =</span> DataDir, <span class="at">ResultDir =</span> ResultDir, <span class="at">finput =</span> finput, <span class="at">foutput =</span> foutput,<span class="at">sex =</span> sex, <span class="at">xplink =</span> <span class="cn">FALSE</span>, <span class="at">autoplink =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;Output plink files, prefixed as PostimputeEX_QC4_Female, are in C:\\Users\\Sarah\\AppData\\Local\\Temp\\RtmpwLdgcn&quot;</code></pre>
+<div class="sourceCode" id="cb37"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" tabindex="-1"></a><span class="co"># Making male plink files</span></span>
+<span id="cb37-2"><a href="#cb37-2" tabindex="-1"></a>foutput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_QC4_Male&quot;</span></span>
+<span id="cb37-3"><a href="#cb37-3" tabindex="-1"></a>sex <span class="ot">&lt;-</span> <span class="st">&quot;males&quot;</span></span>
+<span id="cb37-4"><a href="#cb37-4" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">GetMFPlink</span>(<span class="at">DataDir =</span> DataDir, <span class="at">ResultDir =</span> ResultDir, <span class="at">finput =</span> finput, <span class="at">foutput =</span> foutput,<span class="at">sex =</span> sex, <span class="at">xplink =</span> <span class="cn">FALSE</span>, <span class="at">autoplink =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;Output plink files, prefixed as PostimputeEX_QC4_Male, are in C:\\Users\\Sarah\\AppData\\Local\\Temp\\RtmpwLdgcn&quot;</code></pre>
+<p>Removing the previous QC-ed file from DataDir and copying the new
+QC-ed file to DataDir.</p>
+<div class="sourceCode" id="cb39"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" tabindex="-1"></a><span class="do">## Removing the previous QC-ed file from DataDir and copying the new QC-ed file to DataDir.</span></span>
+<span id="cb39-2"><a href="#cb39-2" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(DataDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;PostimputeEX_QC1&quot;</span>)</span>
+<span id="cb39-3"><a href="#cb39-3" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.remove</span>(<span class="fu">paste0</span>(DataDir,<span class="st">&quot;/&quot;</span>,ftemp)))</span>
+<span id="cb39-4"><a href="#cb39-4" tabindex="-1"></a></span>
+<span id="cb39-5"><a href="#cb39-5" tabindex="-1"></a><span class="do">## Removing the previous QC-ed file from DataDir and copying the new QC-ed file to DataDir.</span></span>
+<span id="cb39-6"><a href="#cb39-6" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(DataDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;PostimputeEX_QC2&quot;</span>)</span>
+<span id="cb39-7"><a href="#cb39-7" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.remove</span>(<span class="fu">paste0</span>(DataDir,<span class="st">&quot;/&quot;</span>,ftemp)))</span></code></pre></div>
+<pre><code>## Warning in file.remove(paste0(DataDir, &quot;/&quot;, ftemp)): cannot remove file
+## &#39;C:/Users/Sarah/AppData/Local/R/win-library/4.3/GXwasR/extdata/&#39;, reason
+## &#39;Permission denied&#39;</code></pre>
+<div class="sourceCode" id="cb41"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" tabindex="-1"></a><span class="do">## Copying new plink files to DataDir</span></span>
+<span id="cb41-2"><a href="#cb41-2" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;PostimputeEX_QC4&quot;</span>)</span>
+<span id="cb41-3"><a href="#cb41-3" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.copy</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>,ftemp),DataDir))</span></code></pre></div>
+</div>
+<div id="step-9-remove-snps-with-maf-0.05-from-each-sex-from-the-sex-specific-autosomal-plink-files" class="section level2">
+<h2>Step 9: Remove SNPs with MAF &lt; 0.05 from each sex from the
+sex-specific autosomal plink files</h2>
+<p>Here, we will perform QC of SNPs using MAF, call rate, monomorphism
+and differential missingness in cases vs controls from each sex from the
+sex-specific autosomal datasets.</p>
+<p>We recommend setting the threshold filters to be the same in males
+and females for analyses of common variants.</p>
+<p>For this, we will use QCsnp() function.</p>
+<div class="sourceCode" id="cb42"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" tabindex="-1"></a><span class="do">## Applying filter to female-specific plink files</span></span>
+<span id="cb42-2"><a href="#cb42-2" tabindex="-1"></a>finput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_QC4_Female&quot;</span></span>
+<span id="cb42-3"><a href="#cb42-3" tabindex="-1"></a>foutput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_QC5_Female&quot;</span></span>
+<span id="cb42-4"><a href="#cb42-4" tabindex="-1"></a>geno <span class="ot">&lt;-</span> <span class="fl">0.05</span></span>
+<span id="cb42-5"><a href="#cb42-5" tabindex="-1"></a>maf <span class="ot">&lt;-</span> <span class="fl">0.05</span></span>
+<span id="cb42-6"><a href="#cb42-6" tabindex="-1"></a>casecontrol <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb42-7"><a href="#cb42-7" tabindex="-1"></a>hweCase <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
+<span id="cb42-8"><a href="#cb42-8" tabindex="-1"></a>hweControl <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
+<span id="cb42-9"><a href="#cb42-9" tabindex="-1"></a>hweCase <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
+<span id="cb42-10"><a href="#cb42-10" tabindex="-1"></a>monomorphicSNPs <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb42-11"><a href="#cb42-11" tabindex="-1"></a>caldiffmiss <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb42-12"><a href="#cb42-12" tabindex="-1"></a>ld_prunning <span class="ot">&lt;-</span> <span class="cn">FALSE</span></span>
+<span id="cb42-13"><a href="#cb42-13" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">QCsnp</span>(<span class="at">DataDir =</span> DataDir, <span class="at">ResultDir =</span> ResultDir, <span class="at">finput =</span> finput,<span class="at">foutput =</span> foutput, <span class="at">geno =</span> geno, <span class="at">maf =</span> maf,<span class="at">hweCase =</span> hweCase, <span class="at">hweControl =</span> hweControl, <span class="at">ld_prunning =</span> ld_prunning, <span class="at">casecontrol =</span> casecontrol, <span class="at">monomorphicSNPs =</span> monomorphicSNPs, <span class="at">caldiffmiss =</span> caldiffmiss)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;0 Ambiguous SNPs (A-T/G-C), indels etc. were removed.&quot;
+## [1] &quot;Thresholds for maf, geno and hwe worked.&quot;
+## [1] &quot;11 variants removed due to missing genotype data (--geno).&quot;
+## [2] &quot;5363 variants removed due to minor allele threshold(s)&quot;    
+## [1] &quot;In cases, &quot;
+## [1] &quot;In controls, &quot;
+## [1] &quot;Program is set up.&quot;
+## [1] &quot;Merging is done using the common SNPs between the input genotype files.&quot;
+## [1] &quot;Plink files with merged regions are in C:\\Users\\Sarah\\AppData\\Local\\Temp\\RtmpwLdgcn prefixed as filtered_temp2&quot;
+## [1] &quot;There are no monomorphic SNPs.&quot;
+## [1] &quot;Filtering for differential missingness between cases and controls is turned off.&quot;
+## [1] &quot;No SNP with differential missingness between cases and controls.&quot;
+## [1] &quot;Output plink files prefixed as ,PostimputeEX_QC5_Female, with passed SNPs are saved in ResultDir.&quot;
+## [1] &quot;Input file has 21330 SNPs.&quot;
+## [1] &quot;Output file has 15956 SNPs after filtering.&quot;</code></pre>
+<div class="sourceCode" id="cb44"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" tabindex="-1"></a><span class="co"># Applying filter to male-specific plink files</span></span>
+<span id="cb44-2"><a href="#cb44-2" tabindex="-1"></a>finput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_QC4_Male&quot;</span></span>
+<span id="cb44-3"><a href="#cb44-3" tabindex="-1"></a>foutput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_QC5_Male&quot;</span></span>
+<span id="cb44-4"><a href="#cb44-4" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">QCsnp</span>(<span class="at">DataDir =</span> DataDir, <span class="at">ResultDir =</span> ResultDir, <span class="at">finput =</span> finput,<span class="at">foutput =</span> foutput, <span class="at">geno =</span> geno, <span class="at">maf =</span> maf,<span class="at">hweCase =</span> hweCase, <span class="at">hweControl =</span> hweControl, <span class="at">ld_prunning =</span> ld_prunning, <span class="at">casecontrol =</span> casecontrol, <span class="at">monomorphicSNPs =</span> monomorphicSNPs, <span class="at">caldiffmiss =</span> caldiffmiss)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;0 Ambiguous SNPs (A-T/G-C), indels etc. were removed.&quot;
+## [1] &quot;Thresholds for maf, geno and hwe worked.&quot;
+## [1] &quot;11 variants removed due to missing genotype data (--geno).&quot;
+## [2] &quot;5309 variants removed due to minor allele threshold(s)&quot;    
+## [1] &quot;In cases, &quot;
+## [1] &quot;In controls, &quot;
+## [1] &quot;Program is set up.&quot;
+## [1] &quot;Merging is done using the common SNPs between the input genotype files.&quot;
+## [1] &quot;Plink files with merged regions are in C:\\Users\\Sarah\\AppData\\Local\\Temp\\RtmpwLdgcn prefixed as filtered_temp2&quot;
+## [1] &quot;There are no monomorphic SNPs.&quot;
+## [1] &quot;Filtering for differential missingness between cases and controls is turned off.&quot;
+## [1] &quot;No SNP with differential missingness between cases and controls.&quot;
+## [1] &quot;Output plink files prefixed as ,PostimputeEX_QC5_Male, with passed SNPs are saved in ResultDir.&quot;
+## [1] &quot;Input file has 21330 SNPs.&quot;
+## [1] &quot;Output file has 16010 SNPs after filtering.&quot;</code></pre>
+<p>Removing the previous QC-ed file from DataDir and copying the new
+QC-ed file to DataDir.</p>
+<div class="sourceCode" id="cb46"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(DataDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;PostimputeEX_QC4&quot;</span>)</span>
+<span id="cb46-2"><a href="#cb46-2" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.remove</span>(<span class="fu">paste0</span>(DataDir,<span class="st">&quot;/&quot;</span>,ftemp)))</span>
+<span id="cb46-3"><a href="#cb46-3" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;PostimputeEX_QC4&quot;</span>)</span>
+<span id="cb46-4"><a href="#cb46-4" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.remove</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>,ftemp)))</span>
+<span id="cb46-5"><a href="#cb46-5" tabindex="-1"></a></span>
+<span id="cb46-6"><a href="#cb46-6" tabindex="-1"></a><span class="do">## Copying the new QC-ed file to DataDir.</span></span>
+<span id="cb46-7"><a href="#cb46-7" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;PostimputeEX_QC5&quot;</span>)</span>
+<span id="cb46-8"><a href="#cb46-8" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.copy</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>,ftemp),DataDir))</span></code></pre></div>
+</div>
+<div id="step-10-combine-sex-specific-autosomal-qc-ed-files-using-common-snps" class="section level2">
+<h2>Step 10: Combine sex-specific autosomal QC-ed files using common
+SNPs:</h2>
+<div class="sourceCode" id="cb47"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" tabindex="-1"></a>finput1 <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_QC5_Female&quot;</span></span>
+<span id="cb47-2"><a href="#cb47-2" tabindex="-1"></a>finput2 <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_QC5_Male&quot;</span></span>
+<span id="cb47-3"><a href="#cb47-3" tabindex="-1"></a>foutput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_Auto&quot;</span></span>
+<span id="cb47-4"><a href="#cb47-4" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">MergeRegion</span>(DataDir, ResultDir, finput1, finput2, foutput, <span class="at">use_common_snps =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;Merging is done using the common SNPs between the input genotype files.&quot;
+## [1] &quot;Plink files with merged regions are in C:\\Users\\Sarah\\AppData\\Local\\Temp\\RtmpwLdgcn prefixed as PostimputeEX_Auto&quot;</code></pre>
+<p>Removing the previous QC-ed file from DataDir and copying the new
+QC-ed file to DataDir.</p>
+<div class="sourceCode" id="cb49"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(DataDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;PostimputeEX_QC5&quot;</span>)</span>
+<span id="cb49-2"><a href="#cb49-2" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.remove</span>(<span class="fu">paste0</span>(DataDir,<span class="st">&quot;/&quot;</span>,ftemp)))</span>
+<span id="cb49-3"><a href="#cb49-3" tabindex="-1"></a></span>
+<span id="cb49-4"><a href="#cb49-4" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;PostimputeEX_Auto&quot;</span>)</span>
+<span id="cb49-5"><a href="#cb49-5" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.copy</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>,ftemp),DataDir))</span>
+<span id="cb49-6"><a href="#cb49-6" tabindex="-1"></a></span>
+<span id="cb49-7"><a href="#cb49-7" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;PostimputeEX_QC5&quot;</span>)</span>
+<span id="cb49-8"><a href="#cb49-8" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.remove</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>,ftemp)))</span>
+<span id="cb49-9"><a href="#cb49-9" tabindex="-1"></a></span>
+<span id="cb49-10"><a href="#cb49-10" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;PostimputeEX_Auto&quot;</span>)</span>
+<span id="cb49-11"><a href="#cb49-11" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.remove</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>,ftemp)))</span></code></pre></div>
+</div>
+<div id="step-11-get-sex-specific-x-chromosomal-plink-files" class="section level2">
+<h2>Step 11: Get sex-specific X-chromosomal plink files</h2>
+<p>For this, we will use plink files prefixed as
+“PostimputeEX_QC3_snps_extracted”. As a reminder, these plink files
+contain X chromosome.</p>
+<p>We will utilize GetMFPlink() function to get male and female plink
+binary files with X chromosomes. We will move these files from ResultDir
+to DataDir and will run the sex-specific QC steps.</p>
+<div class="sourceCode" id="cb50"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" tabindex="-1"></a>finput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_QC3_snps_extracted&quot;</span></span>
+<span id="cb50-2"><a href="#cb50-2" tabindex="-1"></a>foutput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_QC3_XFemale&quot;</span></span>
+<span id="cb50-3"><a href="#cb50-3" tabindex="-1"></a><span class="co"># Making female-specific plink files X chromosome</span></span>
+<span id="cb50-4"><a href="#cb50-4" tabindex="-1"></a>sex <span class="ot">&lt;-</span> <span class="st">&quot;females&quot;</span></span>
+<span id="cb50-5"><a href="#cb50-5" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">GetMFPlink</span>(<span class="at">DataDir =</span> DataDir, <span class="at">ResultDir =</span> ResultDir, <span class="at">finput =</span> finput, <span class="at">foutput =</span> foutput,<span class="at">sex =</span> sex, <span class="at">xplink =</span> <span class="cn">FALSE</span>, <span class="at">autoplink =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;Output plink files, prefixed as PostimputeEX_QC3_XFemale, are in C:\\Users\\Sarah\\AppData\\Local\\Temp\\RtmpwLdgcn&quot;</code></pre>
+<div class="sourceCode" id="cb52"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1" tabindex="-1"></a><span class="co"># Making male-specific plink files X chromosome</span></span>
+<span id="cb52-2"><a href="#cb52-2" tabindex="-1"></a>foutput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_QC3_XMale&quot;</span></span>
+<span id="cb52-3"><a href="#cb52-3" tabindex="-1"></a>sex <span class="ot">&lt;-</span> <span class="st">&quot;males&quot;</span></span>
+<span id="cb52-4"><a href="#cb52-4" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">GetMFPlink</span>(<span class="at">DataDir =</span> DataDir, <span class="at">ResultDir =</span> ResultDir, <span class="at">finput =</span> finput, <span class="at">foutput =</span> foutput,<span class="at">sex =</span> sex, <span class="at">xplink =</span> <span class="cn">FALSE</span>, <span class="at">autoplink =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;Output plink files, prefixed as PostimputeEX_QC3_XMale, are in C:\\Users\\Sarah\\AppData\\Local\\Temp\\RtmpwLdgcn&quot;</code></pre>
+<div class="sourceCode" id="cb54"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1" tabindex="-1"></a><span class="do">## Copying sex-specific plink files</span></span>
+<span id="cb54-2"><a href="#cb54-2" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;PostimputeEX_QC3_X&quot;</span>)</span>
+<span id="cb54-3"><a href="#cb54-3" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.copy</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>,ftemp),DataDir))</span></code></pre></div>
+</div>
+<div id="step-12-qc-of-sex-specific-x-chromosomal-snps" class="section level2">
+<h2>Step 12: QC of sex-specific X-chromosomal SNPs</h2>
+<p>Here, we will remove SNPs with a missingness difference in cases vs
+controls, separately in each sex, and will filter out SNPs based on 1%
+MAF, 5% missingness per genotype, and monomorphic SNPs. We recommend
+setting the threshold filters to be the same in males and females for
+analyses of common variants.</p>
+<p>For this, we will use QCsnp() function.</p>
+<div class="sourceCode" id="cb55"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1" tabindex="-1"></a><span class="do">## Female-specific QC</span></span>
+<span id="cb55-2"><a href="#cb55-2" tabindex="-1"></a>finput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_QC3_XFemale&quot;</span></span>
+<span id="cb55-3"><a href="#cb55-3" tabindex="-1"></a>foutput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_QC4_XFemale&quot;</span></span>
+<span id="cb55-4"><a href="#cb55-4" tabindex="-1"></a>geno <span class="ot">&lt;-</span> <span class="fl">0.05</span> </span>
+<span id="cb55-5"><a href="#cb55-5" tabindex="-1"></a>maf <span class="ot">&lt;-</span> <span class="fl">0.01</span> </span>
+<span id="cb55-6"><a href="#cb55-6" tabindex="-1"></a>casecontrol <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb55-7"><a href="#cb55-7" tabindex="-1"></a>hweControl <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
+<span id="cb55-8"><a href="#cb55-8" tabindex="-1"></a>hweCase <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
+<span id="cb55-9"><a href="#cb55-9" tabindex="-1"></a>monomorphicSNPs <span class="ot">&lt;-</span> <span class="cn">FALSE</span></span>
+<span id="cb55-10"><a href="#cb55-10" tabindex="-1"></a>caldiffmiss <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb55-11"><a href="#cb55-11" tabindex="-1"></a>diffmissFilter <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb55-12"><a href="#cb55-12" tabindex="-1"></a>dmissX <span class="ot">&lt;-</span> <span class="cn">TRUE</span> <span class="co"># Since our input has X chromosome, setting this as TRUE wouldn’t change the result.</span></span>
+<span id="cb55-13"><a href="#cb55-13" tabindex="-1"></a>dmissAutoY <span class="ot">&lt;-</span> <span class="cn">FALSE</span> <span class="co"># Since our input has X chromosome, setting this as TRUE wouldn’t change the result.</span></span>
+<span id="cb55-14"><a href="#cb55-14" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">QCsnp</span>(<span class="at">DataDir =</span> DataDir, <span class="at">ResultDir =</span> ResultDir, <span class="at">finput =</span> finput,<span class="at">foutput =</span> foutput, <span class="at">geno =</span> geno, <span class="at">maf =</span> maf,<span class="at">hweCase =</span> hweCase, <span class="at">hweControl =</span> hweControl, <span class="at">ld_prunning =</span> ld_prunning, <span class="at">casecontrol =</span> casecontrol, <span class="at">monomorphicSNPs =</span> monomorphicSNPs, <span class="at">caldiffmiss =</span> caldiffmiss, <span class="at">diffmissFilter =</span> diffmissFilter, <span class="at">dmissX =</span> dmissX, <span class="at">dmissAutoY =</span> dmissAutoY)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;0 Ambiguous SNPs (A-T/G-C), indels etc. were removed.&quot;
+## [1] &quot;Thresholds for maf, geno and hwe worked.&quot;
+## [1] &quot;0 variants removed due to missing genotype data (--geno).&quot;
+## [2] &quot;110 variants removed due to minor allele threshold(s)&quot;    
+## [1] &quot;In cases, &quot;
+## [1] &quot;In controls, &quot;
+## [1] &quot;Program is set up.&quot;
+## [1] &quot;Merging is done using the common SNPs between the input genotype files.&quot;
+## [1] &quot;Plink files with merged regions are in C:\\Users\\Sarah\\AppData\\Local\\Temp\\RtmpwLdgcn prefixed as filtered_temp2&quot;
+## [1] &quot;No SNP with differential missingness between cases and controls.&quot;
+## [1] &quot;Output plink files prefixed as ,PostimputeEX_QC4_XFemale, with passed SNPs are saved in ResultDir.&quot;
+## [1] &quot;Input file has 983 SNPs.&quot;
+## [1] &quot;Output file has 873 SNPs after filtering.&quot;</code></pre>
+<div class="sourceCode" id="cb57"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1" tabindex="-1"></a><span class="do">## For male-specific QC:</span></span>
+<span id="cb57-2"><a href="#cb57-2" tabindex="-1"></a>finput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_QC3_XMale&quot;</span></span>
+<span id="cb57-3"><a href="#cb57-3" tabindex="-1"></a>foutput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_QC4_XMale&quot;</span></span>
+<span id="cb57-4"><a href="#cb57-4" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">QCsnp</span>(<span class="at">DataDir =</span> DataDir, <span class="at">ResultDir =</span> ResultDir, <span class="at">finput =</span> finput,<span class="at">foutput =</span> foutput, <span class="at">geno =</span> geno, <span class="at">maf =</span> maf,<span class="at">hweCase =</span> hweCase, <span class="at">hweControl =</span> hweControl, <span class="at">ld_prunning =</span> ld_prunning, <span class="at">casecontrol =</span> casecontrol, <span class="at">monomorphicSNPs =</span> monomorphicSNPs, <span class="at">caldiffmiss =</span> caldiffmiss, <span class="at">diffmissFilter =</span> diffmissFilter, <span class="at">dmissX =</span> dmissX, <span class="at">dmissAutoY =</span> dmissAutoY)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;0 Ambiguous SNPs (A-T/G-C), indels etc. were removed.&quot;
+## [1] &quot;Thresholds for maf, geno and hwe worked.&quot;
+## [1] &quot;0 variants removed due to missing genotype data (--geno).&quot;
+## [2] &quot;131 variants removed due to minor allele threshold(s)&quot;    
+## [1] &quot;In cases, &quot;
+## [1] &quot;In controls, &quot;
+## [1] &quot;Program is set up.&quot;
+## [1] &quot;Merging is done using the common SNPs between the input genotype files.&quot;
+## [1] &quot;Plink files with merged regions are in C:\\Users\\Sarah\\AppData\\Local\\Temp\\RtmpwLdgcn prefixed as filtered_temp2&quot;
+## [1] &quot;No SNP with differential missingness between cases and controls.&quot;
+## [1] &quot;Output plink files prefixed as ,PostimputeEX_QC4_XMale, with passed SNPs are saved in ResultDir.&quot;
+## [1] &quot;Input file has 983 SNPs.&quot;
+## [1] &quot;Output file has 852 SNPs after filtering.&quot;</code></pre>
+<div class="sourceCode" id="cb59"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb59-1"><a href="#cb59-1" tabindex="-1"></a><span class="do">## Removing the previous QC-ed file from DataDir and copying the new QC-ed file to DataDir.</span></span>
+<span id="cb59-2"><a href="#cb59-2" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(DataDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;PostimputeEX_QC3&quot;</span>)</span>
+<span id="cb59-3"><a href="#cb59-3" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.remove</span>(<span class="fu">paste0</span>(DataDir,<span class="st">&quot;/&quot;</span>,ftemp)))</span>
+<span id="cb59-4"><a href="#cb59-4" tabindex="-1"></a><span class="do">## Removing the previous QC-ed file from DataDir and copying the new QC-ed file to DataDir.</span></span>
+<span id="cb59-5"><a href="#cb59-5" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;PostimputeEX_QC3&quot;</span>)</span>
+<span id="cb59-6"><a href="#cb59-6" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.remove</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>,ftemp)))</span>
+<span id="cb59-7"><a href="#cb59-7" tabindex="-1"></a></span>
+<span id="cb59-8"><a href="#cb59-8" tabindex="-1"></a><span class="do">## Copying sex-specific plink files</span></span>
+<span id="cb59-9"><a href="#cb59-9" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;PostimputeEX_QC4_X&quot;</span>)</span>
+<span id="cb59-10"><a href="#cb59-10" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.copy</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>,ftemp),DataDir))</span>
+<span id="cb59-11"><a href="#cb59-11" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;PostimputeEX_QC4&quot;</span>)</span>
+<span id="cb59-12"><a href="#cb59-12" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.remove</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>,ftemp)))</span></code></pre></div>
+</div>
+<div id="step-13-combine-sex-specific-qc-ed-x-chromosomal-dataset-using-common-snps" class="section level2">
+<h2>Step 13: Combine sex-specific QC-ed X chromosomal dataset using
+common SNPs</h2>
+<div class="sourceCode" id="cb60"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb60-1"><a href="#cb60-1" tabindex="-1"></a>finput1 <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_QC4_XFemale&quot;</span></span>
+<span id="cb60-2"><a href="#cb60-2" tabindex="-1"></a>finput2 <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_QC4_XMale&quot;</span></span>
+<span id="cb60-3"><a href="#cb60-3" tabindex="-1"></a>foutput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_QC5_Xchr&quot;</span></span>
+<span id="cb60-4"><a href="#cb60-4" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">MergeRegion</span>(DataDir, ResultDir, finput1, finput2, foutput, <span class="at">use_common_snps =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;Merging is done using the common SNPs between the input genotype files.&quot;
+## [1] &quot;Plink files with merged regions are in C:\\Users\\Sarah\\AppData\\Local\\Temp\\RtmpwLdgcn prefixed as PostimputeEX_QC5_Xchr&quot;</code></pre>
+<div class="sourceCode" id="cb62"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb62-1"><a href="#cb62-1" tabindex="-1"></a><span class="do">## Copying merged plink files to DataDir</span></span>
+<span id="cb62-2"><a href="#cb62-2" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;PostimputeEX_QC5_Xchr&quot;</span>)</span>
+<span id="cb62-3"><a href="#cb62-3" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.copy</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>,ftemp),DataDir))</span>
+<span id="cb62-4"><a href="#cb62-4" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.remove</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>,ftemp)))</span>
+<span id="cb62-5"><a href="#cb62-5" tabindex="-1"></a><span class="do">## Removing other QC-ed files from DataDir</span></span>
+<span id="cb62-6"><a href="#cb62-6" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(DataDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;PostimputeEX_QC4&quot;</span>)</span>
+<span id="cb62-7"><a href="#cb62-7" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.remove</span>(<span class="fu">paste0</span>(DataDir,<span class="st">&quot;/&quot;</span>,ftemp)))</span></code></pre></div>
+</div>
+<div id="step-14-test-for-hwe-across-the-x-chromosomes-in-females" class="section level2">
+<h2>Step 14: Test for HWE across the X chromosomes in females</h2>
+<p>Test for HWE across the X in females (cases and controls combined)
+and remove these regions from analysis for all samples.</p>
+<div class="sourceCode" id="cb63"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb63-1"><a href="#cb63-1" tabindex="-1"></a>finput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_QC5_Xchr&quot;</span></span>
+<span id="cb63-2"><a href="#cb63-2" tabindex="-1"></a>foutput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_Xchr&quot;</span></span>
+<span id="cb63-3"><a href="#cb63-3" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">Xhwe</span>(<span class="at">DataDir =</span> DataDir, <span class="at">ResultDir =</span> ResultDir, <span class="at">finput =</span> finput, <span class="at">foutput =</span> foutput, <span class="at">filterSNP =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;Program is set up.&quot;
+## [1] &quot;Output plink files, prefixed as female, are in C:\\Users\\Sarah\\AppData\\Local\\Temp\\RtmpwLdgcn&quot;
+## This test is running on a case-control dataset with female samples.
+## [1] &quot;Failed SNPs are excluded from the output plink files prefixed as PostimputeEX_Xchr is in C:\\Users\\Sarah\\AppData\\Local\\Temp\\RtmpwLdgcn&quot;</code></pre>
+<div class="sourceCode" id="cb65"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1" tabindex="-1"></a><span class="do">## No. of the SNPs failed the test.</span></span>
+<span id="cb65-2"><a href="#cb65-2" tabindex="-1"></a><span class="fu">length</span>(x)<span class="co"># 2 SNPs in X chr in females failed HWE test.</span></span></code></pre></div>
+<pre><code>## [1] 3</code></pre>
+<div class="sourceCode" id="cb67"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb67-1"><a href="#cb67-1" tabindex="-1"></a><span class="do">## The failed SNPs</span></span>
+<span id="cb67-2"><a href="#cb67-2" tabindex="-1"></a>x</span></code></pre></div>
+<pre><code>## [1] &quot;rs56053951&quot; &quot;rs12353847&quot; &quot;rs5940058&quot;</code></pre>
+<div class="sourceCode" id="cb69"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb69-1"><a href="#cb69-1" tabindex="-1"></a><span class="do">## Removing the previous QC-ed file from DataDir and copying the new QC-ed file to DataDir.</span></span>
+<span id="cb69-2"><a href="#cb69-2" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(DataDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;PostimputeEX_QC5_Xchr&quot;</span>)</span>
+<span id="cb69-3"><a href="#cb69-3" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.remove</span>(<span class="fu">paste0</span>(DataDir,<span class="st">&quot;/&quot;</span>,ftemp)))</span>
+<span id="cb69-4"><a href="#cb69-4" tabindex="-1"></a></span>
+<span id="cb69-5"><a href="#cb69-5" tabindex="-1"></a><span class="do">## Copying new QC-ed plink files to DataDir</span></span>
+<span id="cb69-6"><a href="#cb69-6" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;PostimputeEX_Xchr&quot;</span>)</span>
+<span id="cb69-7"><a href="#cb69-7" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.copy</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>,ftemp),DataDir))</span></code></pre></div>
+</div>
+<div id="step-15-checking-for-x-chromosomal-snps-having-maf-difference-in-sexes-in-controls" class="section level2">
+<h2>Step 15: Checking for X-chromosomal SNPs having MAF difference in
+sexes in controls</h2>
+<p>This test should be performed only for binary traits. We will flag
+the failed SNPs if any.</p>
+<div class="sourceCode" id="cb70"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb70-1"><a href="#cb70-1" tabindex="-1"></a>finput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_Xchr&quot;</span></span>
+<span id="cb70-2"><a href="#cb70-2" tabindex="-1"></a>foutput <span class="ot">&lt;-</span> <span class="st">&quot;Test_output&quot;</span></span>
+<span id="cb70-3"><a href="#cb70-3" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">MAFdiffSexControl</span>(DataDir, ResultDir, finput,<span class="at">filterSNP =</span> <span class="cn">FALSE</span>,<span class="at">foutput =</span> foutput)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;No SNP to be flagged or excluded.&quot;</code></pre>
+<div class="sourceCode" id="cb72"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb72-1"><a href="#cb72-1" tabindex="-1"></a>x </span></code></pre></div>
+<pre><code>## NULL</code></pre>
+</div>
+<div id="step-16-combining-autosomal-and-x-chromosomal-qc-ed-datasets" class="section level2">
+<h2>Step 16: Combining autosomal and X-chromosomal QC-ed datasets</h2>
+<div class="sourceCode" id="cb74"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb74-1"><a href="#cb74-1" tabindex="-1"></a>finput1 <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_Auto&quot;</span></span>
+<span id="cb74-2"><a href="#cb74-2" tabindex="-1"></a>finput2 <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeEX_Xchr&quot;</span></span>
+<span id="cb74-3"><a href="#cb74-3" tabindex="-1"></a>foutput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeQC&quot;</span></span>
+<span id="cb74-4"><a href="#cb74-4" tabindex="-1"></a>use_common_snps <span class="ot">=</span> <span class="cn">FALSE</span></span>
+<span id="cb74-5"><a href="#cb74-5" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">MergeRegion</span>(DataDir, ResultDir, finput1, finput2, foutput, <span class="at">use_common_snps =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;Merging is done with all the SNPs i.e., union of the SNPs.&quot;
+## [1] &quot;Plink files with merged regions are in C:\\Users\\Sarah\\AppData\\Local\\Temp\\RtmpwLdgcn prefixed as PostimputeQC&quot;</code></pre>
+<div class="sourceCode" id="cb76"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb76-1"><a href="#cb76-1" tabindex="-1"></a><span class="do">## Removing the previous QC-ed file from DataDir and copying the new QC-ed file to DataDir.</span></span>
+<span id="cb76-2"><a href="#cb76-2" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(DataDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;PostimputeEX&quot;</span>)</span>
+<span id="cb76-3"><a href="#cb76-3" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.remove</span>(<span class="fu">paste0</span>(DataDir,<span class="st">&quot;/&quot;</span>,ftemp)))</span>
+<span id="cb76-4"><a href="#cb76-4" tabindex="-1"></a></span>
+<span id="cb76-5"><a href="#cb76-5" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;PostimputeQC&quot;</span>)</span>
+<span id="cb76-6"><a href="#cb76-6" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.copy</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>,ftemp),DataDir))</span>
+<span id="cb76-7"><a href="#cb76-7" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.remove</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>,ftemp)))</span></code></pre></div>
+</div>
+<div id="step-17-preparing-separate-male-and-female-genotype-dataset-for-sample-level-qc" class="section level2">
+<h2>Step 17: Preparing separate male and female genotype dataset for
+sample level QC</h2>
+<div class="sourceCode" id="cb77"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb77-1"><a href="#cb77-1" tabindex="-1"></a><span class="co"># Making female-specific plink files</span></span>
+<span id="cb77-2"><a href="#cb77-2" tabindex="-1"></a>finput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeQC&quot;</span></span>
+<span id="cb77-3"><a href="#cb77-3" tabindex="-1"></a>foutput <span class="ot">&lt;-</span> <span class="st">&quot;Postimpute_Female&quot;</span></span>
+<span id="cb77-4"><a href="#cb77-4" tabindex="-1"></a>sex <span class="ot">&lt;-</span> <span class="st">&quot;females&quot;</span></span>
+<span id="cb77-5"><a href="#cb77-5" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">GetMFPlink</span>(<span class="at">DataDir =</span> DataDir, <span class="at">ResultDir =</span> ResultDir, <span class="at">finput =</span> finput, <span class="at">foutput =</span> foutput,<span class="at">sex =</span> sex, <span class="at">xplink =</span> <span class="cn">FALSE</span>, <span class="at">autoplink =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;Output plink files, prefixed as Postimpute_Female, are in C:\\Users\\Sarah\\AppData\\Local\\Temp\\RtmpwLdgcn&quot;</code></pre>
+<div class="sourceCode" id="cb79"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb79-1"><a href="#cb79-1" tabindex="-1"></a><span class="co"># Making male-specific plink files</span></span>
+<span id="cb79-2"><a href="#cb79-2" tabindex="-1"></a>finput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeQC&quot;</span></span>
+<span id="cb79-3"><a href="#cb79-3" tabindex="-1"></a>foutput <span class="ot">&lt;-</span> <span class="st">&quot;Postimpute_Male&quot;</span></span>
+<span id="cb79-4"><a href="#cb79-4" tabindex="-1"></a>sex <span class="ot">&lt;-</span> <span class="st">&quot;males&quot;</span></span>
+<span id="cb79-5"><a href="#cb79-5" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">GetMFPlink</span>(<span class="at">DataDir =</span> DataDir, <span class="at">ResultDir =</span> ResultDir, <span class="at">finput =</span> finput, <span class="at">foutput =</span> foutput,<span class="at">sex =</span> sex, <span class="at">xplink =</span> <span class="cn">FALSE</span>, <span class="at">autoplink =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;Output plink files, prefixed as Postimpute_Male, are in C:\\Users\\Sarah\\AppData\\Local\\Temp\\RtmpwLdgcn&quot;</code></pre>
+<div class="sourceCode" id="cb81"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb81-1"><a href="#cb81-1" tabindex="-1"></a><span class="do">## Copying sex-specific plink files to DataDir</span></span>
+<span id="cb81-2"><a href="#cb81-2" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;Postimpute_Female&quot;</span>)</span>
+<span id="cb81-3"><a href="#cb81-3" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.copy</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>,ftemp),DataDir))</span>
+<span id="cb81-4"><a href="#cb81-4" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.remove</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>,ftemp)))</span>
+<span id="cb81-5"><a href="#cb81-5" tabindex="-1"></a></span>
+<span id="cb81-6"><a href="#cb81-6" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;Postimpute_Male&quot;</span>)</span>
+<span id="cb81-7"><a href="#cb81-7" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.copy</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>,ftemp),DataDir))</span>
+<span id="cb81-8"><a href="#cb81-8" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.remove</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>,ftemp)))</span></code></pre></div>
+</div>
+<div id="step-18-sex-specific-sample-level-qc" class="section level2">
+<h2>Step 18: Sex-specific sample level QC</h2>
+<p>From each sex-specific plink files, remove individuals with missing
+genotype rate &gt; 0.1, with absolute value of the heterozygosity F
+statistic &gt; 0.20 and IBD statistics pihat &gt; 0.2.</p>
+<p>For this, we will use QCsample().</p>
+<div class="sourceCode" id="cb82"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb82-1"><a href="#cb82-1" tabindex="-1"></a><span class="do">## Running the function female-specific QC</span></span>
+<span id="cb82-2"><a href="#cb82-2" tabindex="-1"></a>finput <span class="ot">&lt;-</span> <span class="st">&quot;Postimpute_Female&quot;</span></span>
+<span id="cb82-3"><a href="#cb82-3" tabindex="-1"></a>foutput <span class="ot">&lt;-</span> <span class="st">&quot;Postimpute_Female1&quot;</span></span>
+<span id="cb82-4"><a href="#cb82-4" tabindex="-1"></a>imiss <span class="ot">=</span> <span class="fl">0.02</span></span>
+<span id="cb82-5"><a href="#cb82-5" tabindex="-1"></a><span class="co">#Since het = 3 was removing a lot of samples (185), I decided to increase the threshold after looking at the plot.</span></span>
+<span id="cb82-6"><a href="#cb82-6" tabindex="-1"></a>het <span class="ot">=</span> <span class="dv">3</span></span>
+<span id="cb82-7"><a href="#cb82-7" tabindex="-1"></a>small_sample_mod <span class="ot">=</span> <span class="cn">TRUE</span></span>
+<span id="cb82-8"><a href="#cb82-8" tabindex="-1"></a>IBD <span class="ot">=</span> <span class="fl">0.2</span></span>
+<span id="cb82-9"><a href="#cb82-9" tabindex="-1"></a>x <span class="ot">=</span> <span class="fu">QCsample</span>(<span class="at">DataDir =</span> DataDir,<span class="at">ResultDir =</span> ResultDir, <span class="at">finput =</span> finput,<span class="at">foutput =</span> foutput, <span class="at">imiss =</span> imiss,<span class="at">het =</span> het, <span class="at">small_sample_mod =</span> small_sample_mod, <span class="at">IBD =</span> IBD)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;Plots are initiated.&quot;</code></pre>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<pre><code>## [1] &quot;No. of samples filtered/flagged for missingness: 0&quot;
+## [1] &quot;No. of samples filtered/flagged for heterozygosity threshold: 2&quot;
+## [1] &quot;No. of samples filtered/flagged for missingness and heterozygosity: 2&quot;
+## [1] &quot;No sample is filtered out for IDB after missingness and heterozygosity filter.&quot;
+## [1] &quot;No. of samples in input plink files: 151&quot;
+## [1] &quot;No. of samples in output plink files: 149&quot;
+## [1] &quot;Output plink files, Postimpute_Female1 with final samples are in C:\\Users\\Sarah\\AppData\\Local\\Temp\\RtmpwLdgcn.&quot;</code></pre>
+<div class="sourceCode" id="cb85"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb85-1"><a href="#cb85-1" tabindex="-1"></a><span class="do">## Running the function male-specific QC</span></span>
+<span id="cb85-2"><a href="#cb85-2" tabindex="-1"></a></span>
+<span id="cb85-3"><a href="#cb85-3" tabindex="-1"></a>finput <span class="ot">&lt;-</span> <span class="st">&quot;Postimpute_Male&quot;</span></span>
+<span id="cb85-4"><a href="#cb85-4" tabindex="-1"></a>foutput <span class="ot">&lt;-</span> <span class="st">&quot;Postimpute_Male1&quot;</span></span>
+<span id="cb85-5"><a href="#cb85-5" tabindex="-1"></a>imiss <span class="ot">=</span> <span class="fl">0.02</span></span>
+<span id="cb85-6"><a href="#cb85-6" tabindex="-1"></a><span class="co">#Since het = 3 was removing a lot of samples (185), I decided to increase the threshold after looking at the plot.</span></span>
+<span id="cb85-7"><a href="#cb85-7" tabindex="-1"></a>het <span class="ot">=</span> <span class="dv">5</span></span>
+<span id="cb85-8"><a href="#cb85-8" tabindex="-1"></a>small_sample_mod <span class="ot">=</span> <span class="cn">TRUE</span></span>
+<span id="cb85-9"><a href="#cb85-9" tabindex="-1"></a>IBD <span class="ot">=</span> <span class="fl">0.2</span></span>
+<span id="cb85-10"><a href="#cb85-10" tabindex="-1"></a>x <span class="ot">=</span> <span class="fu">QCsample</span>(<span class="at">DataDir =</span> DataDir,<span class="at">ResultDir =</span> ResultDir, <span class="at">small_sample_mod =</span> small_sample_mod, <span class="at">finput =</span> finput,<span class="at">foutput =</span> foutput, <span class="at">imiss =</span> imiss,<span class="at">het =</span> het, <span class="at">IBD =</span> IBD)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;Plots are initiated.&quot;</code></pre>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<pre><code>## [1] &quot;No. of samples filtered/flagged for missingness: 0&quot;
+## [1] &quot;No. of samples filtered/flagged for heterozygosity: 0&quot;
+## [1] &quot;No. of samples filtered for missingness and heterozygosity: 0&quot;
+## [1] &quot;No sample is filtered out for IDB after missingness and heterozygosity filter.&quot;
+## [1] &quot;No. of samples in input plink files: 125&quot;
+## [1] &quot;No. of samples in output plink files: 125&quot;
+## [1] &quot;Output plink files, Postimpute_Male1 with final samples are in C:\\Users\\Sarah\\AppData\\Local\\Temp\\RtmpwLdgcn.&quot;</code></pre>
+<div class="sourceCode" id="cb88"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb88-1"><a href="#cb88-1" tabindex="-1"></a><span class="do">## Copying filtered plink files to DataDir</span></span>
+<span id="cb88-2"><a href="#cb88-2" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;Postimpute_&quot;</span>)</span>
+<span id="cb88-3"><a href="#cb88-3" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.copy</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>,ftemp),DataDir))</span>
+<span id="cb88-4"><a href="#cb88-4" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.remove</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>,ftemp)))</span></code></pre></div>
+</div>
+<div id="step-19-combine-male-and-female-specific-qc-ed-genotype-datasets" class="section level2">
+<h2>Step 19: Combine male and female-specific Qc-ed genotype
+datasets</h2>
+<div class="sourceCode" id="cb89"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb89-1"><a href="#cb89-1" tabindex="-1"></a><span class="do">## Combine male and female-specific files</span></span>
+<span id="cb89-2"><a href="#cb89-2" tabindex="-1"></a><span class="do">## Running the function</span></span>
+<span id="cb89-3"><a href="#cb89-3" tabindex="-1"></a>finput1 <span class="ot">&lt;-</span> <span class="st">&quot;Postimpute_Female1&quot;</span></span>
+<span id="cb89-4"><a href="#cb89-4" tabindex="-1"></a>finput2 <span class="ot">&lt;-</span> <span class="st">&quot;Postimpute_Male1&quot;</span> </span>
+<span id="cb89-5"><a href="#cb89-5" tabindex="-1"></a>foutput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeFinal&quot;</span></span>
+<span id="cb89-6"><a href="#cb89-6" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">MergeRegion</span>(DataDir, ResultDir, finput1, finput2, foutput, <span class="at">use_common_snps =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;Merging is done using the common SNPs between the input genotype files.&quot;
+## [1] &quot;Plink files with merged regions are in C:\\Users\\Sarah\\AppData\\Local\\Temp\\RtmpwLdgcn prefixed as PostimputeFinal&quot;</code></pre>
+<div class="sourceCode" id="cb91"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb91-1"><a href="#cb91-1" tabindex="-1"></a><span class="do">## Removing the not needed files from DataDir.</span></span>
+<span id="cb91-2"><a href="#cb91-2" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(DataDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;Postimpute_&quot;</span>)</span>
+<span id="cb91-3"><a href="#cb91-3" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">file.remove</span>(<span class="fu">paste0</span>(DataDir,<span class="st">&quot;/&quot;</span>,ftemp)))</span></code></pre></div>
+</div>
+<div id="final-summary-of-the-final-qc-ed-genotype-dataset" class="section level2">
+<h2>Final Summary of the final QC-ed genotype dataset</h2>
+<div class="sourceCode" id="cb92"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb92-1"><a href="#cb92-1" tabindex="-1"></a>finput <span class="ot">&lt;-</span> <span class="st">&quot;PostimputeFinal&quot;</span></span>
+<span id="cb92-2"><a href="#cb92-2" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">PlinkSummary</span>(ResultDir, ResultDir, finput)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;Dataset:PostimputeFinal&quot;
+## [1] &quot;Number of missing phenotypes:0&quot;
+## [1] &quot;Number of males:125&quot;
+## [1] &quot;Number of females:149&quot;
+## [1] &quot;This is a case-control data.&quot;
+## [1] &quot;Number of cases:107&quot;
+## [1] &quot;Number of controls:167&quot;
+## [1] &quot;Number of cases in males:53&quot;
+## [1] &quot;Number of controls in males:72&quot;
+## [1] &quot;Number of cases in females:54&quot;
+## [1] &quot;Number of controls in females:95&quot;
+## [1] &quot;Number of chromosomes:11&quot;
+##  [1] &quot;Chr:1&quot;  &quot;Chr:2&quot;  &quot;Chr:3&quot;  &quot;Chr:4&quot;  &quot;Chr:5&quot;  &quot;Chr:6&quot;  &quot;Chr:7&quot;  &quot;Chr:8&quot; 
+##  [9] &quot;Chr:9&quot;  &quot;Chr:10&quot; &quot;Chr:23&quot;
+## [1] &quot;Total number of SNPs:16208&quot;
+## [1] &quot;Total number of samples:274&quot;</code></pre>
+</div>
+<div id="citation" class="section level2">
+<h2>Citation</h2>
+<p>If you are using GXwasR package and/or following this pipeline in
+your study, please cite it as:</p>
+<div class="sourceCode" id="cb94"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb94-1"><a href="#cb94-1" tabindex="-1"></a><span class="fu">citation</span>(<span class="st">&quot;GXwasR&quot;</span>)</span></code></pre></div>
+<pre><code>## To cite package &#39;GXwasR&#39; in publications use:
+## 
+##   Bose B (2024). _GXwasR: A tool for conducting sex-aware quality
+##   control, association analysis, and testing various models of
+##   sex-dependent genetic effects in complex traits_. R package version
+##   x.x.x, &lt;http://example.com/YourPackageName&gt;.
+## 
+## A BibTeX entry for LaTeX users is
+## 
+##   @Manual{,
+##     title = {GXwasR: A tool for conducting sex-aware quality control, association analysis, and testing various models of sex-dependent genetic effects in complex traits},
+##     author = {Banabithi Bose},
+##     year = {2024},
+##     note = {R package version x.x.x},
+##     url = {http://example.com/YourPackageName},
+##   }</code></pre>
+</div>
+<div id="tutorials-link-these-will-be-available-with-the-publications." class="section level2">
+<h2>Tutorials Link (These will be available with the publications.)</h2>
+<p><strong>Please follow these tutorials to know more about the
+functionality of the package GXwasR.</strong></p>
+<p>A list of all the functions in GXwasR:</p>
+<p>Tutorial for performing post-imputation QC followed by sex-aware
+association tests:</p>
+<p>Tutorial for performing pre-imputation QC using GXwasR:</p>
+<p>Tutorial for performing post-imputation QC using GXwasR:</p>
+<p>Tutorial for sex-combined and sex-stratified GWAS with
+XWAS:<strong>hdhghchjfvjh</strong></p>
+<p>Tutorial for sex-differential test:<strong>gdhgdcmh</strong></p>
+<p>Tutorial for ancestry estimation:</p>
+<p>Tutorial for computing polygenic risk
+score:<strong>jcjjcjh</strong></p>
+<p>Tutorial for meta analysis:</p>
+<p>Tutorial for heritability estimate and genetic correlation:</p>
+<p>Tutorial for gene-based tests:</p>
+<pre><code>                              ******************* THANK YOU! *************************</code></pre>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,188 @@
+---
+title: "Running GWAS, XWAS and Sex-differential tests Using GXwasR"
+author: "By Banabithi Bose, Northwestern University"
+date: "6/6/2024"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Running GWAS, XWAS and Sex-differential tests Using GXwasR}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.width=6, fig.height=6)
+```
+## Introduction
+This document contains an example of running a GWAS with XWAS model and Sex-differential tests. 
+
+Users must perform pre-imputation and post-imputation quality control (QC) on genotype dataset and then proceed with this tutorial in actual scenario. Please follow the detailed QC-ed steps provided in:'GXwasR_Preimputation' and 'GXwasR_Postimputation'.
+
+
+## Example Datasets
+The PLINK bed, bim, and fam files are the three mandatory files representing a genotype dataset to run this tutorial. To know about these file extensions, please check https://www.cog-genomics.org/plink/1.9/formats.
+
+**GXwasR_example:**
+
+GXwasR_example.bed
+
+GXwasR_example.bim
+
+GXwasR_example.fam
+
+These plink files contain genotypes for 276 individuals (males and females) simulated from 1000Genome from European decent with 26515 variants across twelve chromosomes (1-10,23,24). This dataset contains 125 males, 151 females, 108 cases and 168 controls. We will utilize this set of plink files as proxy of pre-imputated genotype data.
+
+## Loading the GXwasR library
+```{r}
+## Call some libraries
+library(GXwasR)
+library(printr)
+library(rmarkdown)
+## Load the example .Rda files
+data("GXwasRData")
+```
+## Learn about all the GXwasR functions
+```{r}
+## Not Run
+#browseVignettes("GXwasR")
+```
+## Example Dataset Summary
+**Dataset: GXwasR_example**
+
+```{r}
+DataDir <- system.file("extdata", package = "GXwasR")
+ResultDir <- tempdir()
+finput <- "GXwasR_example"
+x <- PlinkSummary(DataDir, ResultDir, finput)
+```
+## Sex-combined and sex-stratified GWAS with XWAS
+
+### Function: GXwas()
+```{r}
+help(GXwas, package = GXwasR)
+```
+### <a id = "Running GXwas"> </a> Running GXwas
+```{r}
+## Running
+DataDir <- system.file("extdata", package = "GXwasR")
+ResultDir = tempdir()
+finput <- "GXwasR_example"
+standard_beta = TRUE
+xsex = FALSE
+sex = TRUE
+Inphenocov = NULL
+covartest = NULL
+interaction = FALSE
+MF.na.rm = FALSE
+B = 10000
+MF.zero.sub = 0.00001
+trait = "binary"
+xmodel = "FMstatrified"
+combtest = "fisher.method"
+snp_pval = 1e-08
+covarfile = NULL
+ncores = 0
+plot.jpeg = FALSE
+MF.mc.cores = 1
+genomewideline = 7.3
+suggestiveline = 5
+plotname = "GXwas.plot"
+annotateTopSnp = FALSE
+MF.na.rm = FALSE
+B = 10000
+MF.zero.sub = 0.00001
+MF.p.corr = "none"
+plotname = "GXwas.plot"
+ResultGXwas <- GXwas(DataDir = DataDir,ResultDir = ResultDir, finput = finput, xmodel = xmodel, trait = trait, covarfile = covarfile, sex = sex, xsex = xsex, combtest = combtest, MF.p.corr = "none", snp_pval = snp_pval, plot.jpeg = plot.jpeg, suggestiveline = 5, genomewideline = 7.3,MF.mc.cores = 1, ncores = ncores)
+
+```
+```{r}
+# Outputs
+knitr::kable(ResultGXwas$CombinedWAS[1:5,], caption = 'Dataframe containing the result of stratified model')
+knitr::kable(ResultGXwas$MaleWAS[1:5,], caption = 'Stratified GWAS result with male cohort.')
+knitr::kable(ResultGXwas$FemaleWAS[1:5,], caption = 'Stratified GWAS result with female cohort.')
+
+```
+```{r}
+## Top ten associations in female-specific study:
+load(paste0(ResultDir,"/","FemaleWAS.Rda"))
+x1 <- FemaleWAS
+x2 <- x1[x1$TEST=="ADD",]
+x3 <- x2[order(x2$P),]
+x <- x3[1:10, -c(5:6)]
+```
+```{r}
+## Top ten associations in male-specific study:
+load(paste0(ResultDir,"/","MaleWAS.Rda"))
+x1 <- MaleWAS
+x2 <- x1[x1$TEST=="ADD",]
+x3 <- x2[order(x2$P),]
+x <- x3[1:10, -c(5:6)]
+```
+```{r}
+## Top ten associations in FM02comb model:
+load(paste0(ResultDir,"/","CombinedWAS.Rda"))
+x1 <- CombinedWAS
+x2 <- x1[order(x1$P),]
+x <- x2[1:10,]
+```
+To know more about the function GXwas() to run different GWAS and XWAS models with different arguments, please follow this tutorial:**hhhdgdh**
+
+## Performing sex-differential test
+Now, we will perform a sex-differential test:
+
+### Function: SexDiff()
+```{r}
+help(SexDiff, package = GXwasR)
+```
+### Running SexDiff
+```{r}
+## Running
+## Running the function
+x1 <- MaleWAS
+x1 <- x1[x1$TEST=="ADD",]
+x1 <- x1[,c(1:4,7:8)]
+colnames(x1)<- c("CHR","SNP","BP","A1","BETA_M","SE_M")
+x2 <- FemaleWAS
+x2 <- x2[x2$TEST=="ADD",]
+x2 <- x2[,c(1:4,7:8)]
+colnames(x2)<- c("CHR","SNP","BP","A1","BETA_F","SE_F")
+Difftest <- SexDiff(Mfile=x1,Ffile=x2)
+```
+```{r}
+## Significant SNPs with sex-differential effect
+sig.snps <- Difftest[Difftest$adjP <0.05,]
+colnames(sig.snps) <- c("SNP","CHR","BP","A1","T_statistic","Pvalue","Adjusted_Pvalue")
+knitr::kable(sig.snps, caption = 'SNPs with significant sex-differential effect.')
+```
+## Citation
+If you are using GXwasR package and/or following this pipeline in your study, please cite it as:
+```{r}
+citation("GXwasR")
+```
+
+## Tutorials Link
+
+**Please follow these tutorials to know more about the functionality of the package GXwasR.**
+
+A list of all the functions in GXwasR:
+
+Tutorial for performing post-imputation QC followed by sex-aware association tests:
+
+Tutorial for performing pre-imputation QC using GXwasR:
+
+Tutorial for performing post-imputation QC using GXwasR:
+
+Tutorial for sex-combined and sex-stratified GWAS with XWAS:**hdhghchjfvjh**
+
+Tutorial for sex-differential test:**gdhgdcmh**
+
+Tutorial for ancestry estimation:
+
+Tutorial for computing polygenic risk score:**jcjjcjh**
+
+Tutorial for meta analysis:
+
+Tutorial for heritability estimate and genetic correlation:
+
+Tutorial for gene-based tests:
+
+                                  ******************* THANK YOU! *************************

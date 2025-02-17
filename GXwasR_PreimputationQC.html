@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="By Banabithi Bose, Northwestern University" />
+
+
+<title>Pre-impute Quality Control Pipeline Using GXwasR</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Pre-impute Quality Control Pipeline Using
+GXwasR</h1>
+<h4 class="author">By Banabithi Bose, Northwestern University</h4>
+<h4 class="date">1/13/2024</h4>
+
+
+
+<p>This document outlines the pre-imputation quality control (QC) steps,
+which represent our recommended best practices. Users have the
+flexibility to create their own pipelines using the GXwasR functions
+based on their specific needs.</p>
+<div id="pre-imputation-qc-pipeline" class="section level2">
+<h2>Pre-imputation QC pipeline:</h2>
+<p>We will run the pre-imputation QC pipeline in this vignette utilizing
+the functions from GXwasR package.</p>
+</div>
+<div id="example-datasets" class="section level2">
+<h2>Example Datasets</h2>
+<p>The PLINK bed, bim, and fam files are the three mandatory files
+representing a genotype dataset to run this pipeline. To know about
+these file extensions, please check <a href="https://www.cog-genomics.org/plink/1.9/formats" class="uri">https://www.cog-genomics.org/plink/1.9/formats</a>.</p>
+<p><strong>GXwasR_example:</strong></p>
+<p>GXwasR_example.bed</p>
+<p>GXwasR_example.bim</p>
+<p>GXwasR_example.fam</p>
+<p>These plink files contain genotypes for 276 individuals (males and
+females) simulated from 1000Genome from European decent with 26515
+variants across twelve chromosomes (1-10,23,24). This dataset contains
+125 males, 151 females, 108 cases and 168 controls. We will utilize this
+set of plink files as proxy of pre-imputated genotype data.</p>
+</div>
+<div id="pre-imputation-qc-steps" class="section level2">
+<h2>Pre-imputation QC steps</h2>
+<ul>
+<li><p><strong>Filtering Multi-Allelic Variants:</strong> This step is
+essential for simplifying the genetic data analysis by removing variants
+that have more than two alleles. Multi-allelic variants can complicate
+analyses and interpretations, making this filtering crucial for a
+streamlined dataset.</p></li>
+<li><p><strong>Removal of Ambiguous SNPs and Indels:</strong> We
+specifically target SNPs with ambiguous mappings (like AT and GC
+pairings) and indels (insertions and deletions), which can lead to
+inaccuracies in genotype calling. Removing these elements helps in
+maintaining the integrity of our genetic data.</p></li>
+<li><p><strong>QC of SNPs with Relaxed Genotype Call Rate:</strong> In
+this phase, we filter SNPs based on a less stringent genotype call rate.
+This step aims to balance between retaining enough informative SNPs and
+excluding those with too much missing data.</p></li>
+<li><p><strong>Filtering Samples with Relaxed Missing Rate
+Threshold:</strong> Similar to SNPs, we apply a relaxed threshold for
+sample missingness. This approach ensures that we don’t prematurely
+exclude samples that might be informative despite having a slightly
+higher rate of missing data.</p></li>
+<li><p><strong>Application of Sex Check:</strong> We verify the
+consistency between reported and genetic sex. This check helps identify
+potential sample mix-ups or issues with data integrity.</p></li>
+<li><p><strong>Filter for Needed Chromosomes:</strong> Focus is narrowed
+to autosomes and sex chromosomes, as these are typically the most
+relevant for genetic studies. This step streamlines the dataset to the
+chromosomes of interest.</p></li>
+<li><p><strong>Second Round of SNP Filtering:</strong> This more
+stringent phase includes filters for minor allele frequency (MAF) &lt;
+0.01, call rate &lt; 0.02, case-control differential missingness,
+Hardy-Weinberg equilibrium (cases &lt; e-10; conrtols &lt; e-06), and
+the removal of monomorphic SNPs. This rigorous filtering ensures that
+only the most reliable SNPs are retained for analysis.</p></li>
+<li><p><strong>Second Round of Sample Filtering:</strong> Here, we apply
+stringent thresholds for call rate (&lt; 0.02), heterozygosity, and
+relatedness (IBD F-stat &lt; 0.2). This step further refines the sample
+pool, ensuring that only high-quality samples are included.</p></li>
+<li><p><strong>Applying Ancestry Check:</strong> We assess the ancestry
+of the samples to identify and exclude outliers from different
+ancestries, which is vital for controlling population stratification in
+genetic association studies.</p></li>
+<li><p><strong>Third Round of SNP Filtering:</strong> This final
+filtering step ensures that all previously applied SNP thresholds are
+maintained even after the rigorous sample filtering. It’s a crucial step
+to guarantee the overall quality and consistency of the SNP data
+set.</p></li>
+</ul>
+</div>
+<div id="loading-the-gxwasr-library" class="section level2">
+<h2>Loading the GXwasR library</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="do">## Call some libraries</span></span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">library</span>(GXwasR)</span></code></pre></div>
+<pre><code>## 
+## GXwasR: Genome-wide and x-chromosome wide association analyses applying
+## best practices of quality control over genetic data</code></pre>
+<pre><code>## Version 0.7.0 () installed</code></pre>
+<pre><code>## Author: Banabithi Bose [aut, cre] (&lt;https://orcid.org/0000-0003-0842-8768&gt;)</code></pre>
+<pre><code>## Maintainer: Banabithi Bose &lt;banabithi.bose@gmail.com&gt;</code></pre>
+<pre><code>## Tutorial: https://github.com</code></pre>
+<pre><code>## Use citation(&quot;GXwasR&quot;) to know how to cite this work.</code></pre>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">library</span>(printr)</span></code></pre></div>
+<pre><code>## Registered S3 method overwritten by &#39;printr&#39;:
+##   method                from     
+##   knit_print.data.frame rmarkdown</code></pre>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="fu">library</span>(rmarkdown)</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="do">## Load the example .Rda files</span></span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;GXwasRData&quot;</span>)</span></code></pre></div>
+</div>
+<div id="learn-about-all-the-gxwasr-functions" class="section level2">
+<h2>Learn about all the GXwasR functions</h2>
+<p><strong>Before beginning the pre-imputation quality control (QC), it
+is recommended that users familiarize themselves with all the functions
+in the GXwasR package. This knowledge will help them understand the
+required input arguments, how to execute the functions, and what outputs
+to expect.</strong></p>
+<p>To explore all available functions, users should first load the
+GXwasR library and then use the browseVignettes() function:</p>
+<p>library(GXwasR)</p>
+<p>browseVignettes(“GXwasR”)</p>
+</div>
+<div id="example-dataset-summary" class="section level2">
+<h2>Example Dataset Summary</h2>
+<p><strong>Dataset: GXwasR_example</strong></p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a>DataDir <span class="ot">&lt;-</span> <span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="at">package =</span> <span class="st">&quot;GXwasR&quot;</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>ResultDir <span class="ot">&lt;-</span> <span class="fu">tempdir</span>()</span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a>finput <span class="ot">&lt;-</span> <span class="st">&quot;GXwasR_example&quot;</span></span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">PlinkSummary</span>(DataDir, ResultDir, finput)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;Dataset:GXwasR_example&quot;
+## [1] &quot;Number of missing phenotypes:0&quot;
+## [1] &quot;Number of males:125&quot;
+## [1] &quot;Number of females:151&quot;
+## [1] &quot;This is a case-control data.&quot;
+## [1] &quot;Number of cases:108&quot;
+## [1] &quot;Number of controls:168&quot;
+## [1] &quot;Number of cases in males:53&quot;
+## [1] &quot;Number of controls in males:72&quot;
+## [1] &quot;Number of cases in females:55&quot;
+## [1] &quot;Number of controls in females:96&quot;
+## [1] &quot;Number of chromosomes:12&quot;
+##  [1] &quot;Chr:1&quot;  &quot;Chr:2&quot;  &quot;Chr:3&quot;  &quot;Chr:4&quot;  &quot;Chr:5&quot;  &quot;Chr:6&quot;  &quot;Chr:7&quot;  &quot;Chr:8&quot; 
+##  [9] &quot;Chr:9&quot;  &quot;Chr:10&quot; &quot;Chr:23&quot; &quot;Chr:24&quot;
+## [1] &quot;Total number of SNPs:26527&quot;
+## [1] &quot;Total number of samples:276&quot;</code></pre>
+</div>
+<div id="step-1-filtering-multi-allelic-variants" class="section level2">
+<h2>Step 1: Filtering multi-allelic variants</h2>
+<p>Firstly, users need to ensure that their input plink files are
+bi-allelic. To ensure that, it is advised to run the FilterAllele()
+function with the input dataset.</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a>foutput <span class="ot">&lt;-</span> <span class="st">&quot;PreimputeEX_QC1&quot;</span></span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">FilterAllele</span>(DataDir, ResultDir, finput, foutput)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;There is no multi-allelic SNP present in the input dataset.&quot;</code></pre>
+<p>Since there was no multi-allelic SNPs, we will proceed with the same
+input data.</p>
+</div>
+<div id="step-2-qc-of-snps-for-genotype-call-rate" class="section level2">
+<h2>Step 2: QC of SNPs for genotype call rate</h2>
+<p>It removes variants that are missing genotype data for more than 20%
+of the individuals in your dataset. This function implicitly remove
+ambiguous SNPs (i.e., AT&lt;&gt;GC), indels etc. Users can set their own
+threshold.</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a><span class="co"># Running</span></span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a>foutput <span class="ot">&lt;-</span> <span class="st">&quot;PreimputeEX_QC1&quot;</span></span>
+<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a>geno <span class="ot">&lt;-</span> <span class="fl">0.2</span></span>
+<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a>maf <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
+<span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a>casecontrol <span class="ot">&lt;-</span> <span class="cn">FALSE</span></span>
+<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a>caldiffmiss <span class="ot">&lt;-</span> <span class="cn">FALSE</span></span>
+<span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a>diffmissFilter <span class="ot">&lt;-</span> <span class="cn">FALSE</span></span>
+<span id="cb15-8"><a href="#cb15-8" tabindex="-1"></a>dmissX <span class="ot">&lt;-</span> <span class="cn">FALSE</span></span>
+<span id="cb15-9"><a href="#cb15-9" tabindex="-1"></a>dmissAutoY <span class="ot">&lt;-</span> <span class="cn">FALSE</span></span>
+<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a>monomorphicSNPs <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb15-11"><a href="#cb15-11" tabindex="-1"></a>ld_prunning <span class="ot">&lt;-</span> <span class="cn">FALSE</span></span>
+<span id="cb15-12"><a href="#cb15-12" tabindex="-1"></a>casecontrol <span class="ot">&lt;-</span> <span class="cn">FALSE</span></span>
+<span id="cb15-13"><a href="#cb15-13" tabindex="-1"></a>hweCase <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
+<span id="cb15-14"><a href="#cb15-14" tabindex="-1"></a>hweControl <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
+<span id="cb15-15"><a href="#cb15-15" tabindex="-1"></a>monomorphicSNPs <span class="ot">&lt;-</span> <span class="cn">FALSE</span></span>
+<span id="cb15-16"><a href="#cb15-16" tabindex="-1"></a>ld_prunning <span class="ot">&lt;-</span> <span class="cn">FALSE</span></span>
+<span id="cb15-17"><a href="#cb15-17" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">QCsnp</span>(<span class="at">DataDir =</span> DataDir, <span class="at">ResultDir =</span> ResultDir, <span class="at">finput =</span> finput,<span class="at">foutput =</span> foutput, <span class="at">geno =</span> geno, <span class="at">maf =</span> maf,<span class="at">hweCase =</span> hweCase, <span class="at">hweControl =</span> hweControl, <span class="at">ld_prunning =</span> ld_prunning, <span class="at">casecontrol =</span> casecontrol, <span class="at">monomorphicSNPs =</span> monomorphicSNPs, <span class="at">caldiffmiss =</span> caldiffmiss, <span class="at">dmissX =</span> dmissX, <span class="at">dmissAutoY =</span> dmissAutoY, <span class="at">diffmissFilter =</span> diffmissFilter)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;4214 Ambiguous SNPs (A-T/G-C), indels etc. were removed.&quot;
+## [1] &quot;Thresholds for maf, geno and hwe worked.&quot;
+## [1] &quot;11 variants removed due to missing genotype data (--geno).&quot;
+## [1] &quot;No filter based on differential missingness will be applied.&quot;
+## [1] &quot;Output plink files prefixed as ,PreimputeEX_QC1, with passed SNPs are saved in ResultDir.&quot;
+## [1] &quot;Input file has 26527 SNPs.&quot;
+## [1] &quot;Output file has 22302 SNPs after filtering.&quot;</code></pre>
+<p>Copying the plink files from ResultDir to DataDir.</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;PreimputeEX_QC1&quot;</span>)</span>
+<span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a><span class="fu">file.copy</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>,ftemp),DataDir)</span></code></pre></div>
+<pre><code>## [1] FALSE FALSE FALSE FALSE</code></pre>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" tabindex="-1"></a><span class="fu">PlinkSummary</span>(DataDir, ResultDir, <span class="at">finput =</span> <span class="st">&quot;PreimputeEX_QC1&quot;</span>)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;Dataset:PreimputeEX_QC1&quot;
+## [1] &quot;Number of missing phenotypes:0&quot;
+## [1] &quot;Number of males:125&quot;
+## [1] &quot;Number of females:151&quot;
+## [1] &quot;This is a case-control data.&quot;
+## [1] &quot;Number of cases:108&quot;
+## [1] &quot;Number of controls:168&quot;
+## [1] &quot;Number of cases in males:53&quot;
+## [1] &quot;Number of controls in males:72&quot;
+## [1] &quot;Number of cases in females:55&quot;
+## [1] &quot;Number of controls in females:96&quot;
+## [1] &quot;Number of chromosomes:11&quot;
+##  [1] &quot;Chr:1&quot;  &quot;Chr:2&quot;  &quot;Chr:3&quot;  &quot;Chr:4&quot;  &quot;Chr:5&quot;  &quot;Chr:6&quot;  &quot;Chr:7&quot;  &quot;Chr:8&quot; 
+##  [9] &quot;Chr:9&quot;  &quot;Chr:10&quot; &quot;Chr:23&quot;
+## [1] &quot;Total number of SNPs:22302&quot;
+## [1] &quot;Total number of samples:276&quot;</code></pre>
+<pre><code>## NULL</code></pre>
+</div>
+<div id="step-3-filtering-samples-with-high-missing-rate-threshold." class="section level2">
+<h2>Step 3: Filtering samples with high missing rate threshold.</h2>
+<p>It excludes individuals who have missing genotype data for more than
+20% of the genetic variants in the dataset.</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" tabindex="-1"></a><span class="co"># Running</span></span>
+<span id="cb22-2"><a href="#cb22-2" tabindex="-1"></a>finput <span class="ot">&lt;-</span> <span class="st">&quot;PreimputeEX_QC1&quot;</span></span>
+<span id="cb22-3"><a href="#cb22-3" tabindex="-1"></a>foutput <span class="ot">&lt;-</span> <span class="st">&quot;PreimputeEX_QC2&quot;</span></span>
+<span id="cb22-4"><a href="#cb22-4" tabindex="-1"></a>imiss <span class="ot">=</span> <span class="fl">0.2</span></span>
+<span id="cb22-5"><a href="#cb22-5" tabindex="-1"></a>het <span class="ot">=</span> <span class="cn">NULL</span></span>
+<span id="cb22-6"><a href="#cb22-6" tabindex="-1"></a>IBD <span class="ot">=</span> <span class="cn">NULL</span></span>
+<span id="cb22-7"><a href="#cb22-7" tabindex="-1"></a>filterSample <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb22-8"><a href="#cb22-8" tabindex="-1"></a>ambi_out <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb22-9"><a href="#cb22-9" tabindex="-1"></a>x <span class="ot">=</span> <span class="fu">QCsample</span>(<span class="at">DataDir =</span> DataDir,<span class="at">ResultDir =</span> ResultDir, <span class="at">finput =</span> finput,<span class="at">foutput =</span> foutput, <span class="at">imiss =</span> imiss,<span class="at">het =</span> het, <span class="at">IBD =</span> <span class="cn">NULL</span>, <span class="at">filterSample =</span> filterSample, <span class="at">ambi_out =</span> ambi_out)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;Missingness and heterogygosity thresholds are NULL.&quot;
+## [1] &quot;There will be no sample to be filtered for IBD with &#39;IBD&#39; threshold.&quot;
+## [1] &quot;No. of samples in input plink files: 276&quot;
+## [1] &quot;No. of samples in output plink files: 276&quot;
+## [1] &quot;Output plink files, PreimputeEX_QC2 with final samples are in C:\\Users\\Sarah\\AppData\\Local\\Temp\\RtmpAZbmeB.&quot;</code></pre>
+</div>
+<div id="step-4-apply-sex-check" class="section level2">
+<h2>Step 4: Apply sex check</h2>
+<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" tabindex="-1"></a>finput <span class="ot">&lt;-</span> <span class="st">&quot;PreimputeEX_QC1&quot;</span> <span class="co"># Using the same input file</span></span>
+<span id="cb24-2"><a href="#cb24-2" tabindex="-1"></a>LD <span class="ot">=</span> <span class="cn">TRUE</span></span>
+<span id="cb24-3"><a href="#cb24-3" tabindex="-1"></a>LD_window_size <span class="ot">&lt;-</span> <span class="dv">50</span></span>
+<span id="cb24-4"><a href="#cb24-4" tabindex="-1"></a>LD_step_size <span class="ot">&lt;-</span> <span class="dv">5</span></span>
+<span id="cb24-5"><a href="#cb24-5" tabindex="-1"></a>LD_r2_threshold <span class="ot">&lt;-</span> <span class="fl">0.02</span></span>
+<span id="cb24-6"><a href="#cb24-6" tabindex="-1"></a>fmax_F <span class="ot">&lt;-</span> <span class="fl">0.3</span></span>
+<span id="cb24-7"><a href="#cb24-7" tabindex="-1"></a>mmin_F <span class="ot">&lt;-</span> <span class="fl">0.7</span></span>
+<span id="cb24-8"><a href="#cb24-8" tabindex="-1"></a><span class="co"># We will not impute sex</span></span>
+<span id="cb24-9"><a href="#cb24-9" tabindex="-1"></a>impute_sex <span class="ot">&lt;-</span> <span class="cn">FALSE</span></span>
+<span id="cb24-10"><a href="#cb24-10" tabindex="-1"></a>compute_freq <span class="ot">&lt;-</span> <span class="cn">FALSE</span></span>
+<span id="cb24-11"><a href="#cb24-11" tabindex="-1"></a>SexCheckResult <span class="ot">&lt;-</span><span class="fu">SexCheck</span>(<span class="at">DataDir=</span>DataDir,<span class="at">ResultDir =</span> ResultDir, <span class="at">finput=</span>finput,<span class="at">impute_sex=</span>impute_sex,<span class="at">compute_freq =</span>compute_freq,<span class="at">LD_window_size=</span>LD_window_size,<span class="at">LD_step_size=</span>LD_step_size,<span class="at">LD_r2_threshold=</span><span class="fl">0.02</span>,<span class="at">fmax_F =</span> fmax_F,<span class="at">mmin_F=</span>mmin_F)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;There are no Y chromosomes in the input PLINK files. Estimates will be based solely on the X chromosome.&quot;</code></pre>
+<div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" tabindex="-1"></a>problematic_sex <span class="ot">&lt;-</span> SexCheckResult[SexCheckResult<span class="sc">$</span>STATUS <span class="sc">!=</span> <span class="st">&quot;OK&quot;</span>,]</span>
+<span id="cb26-2"><a href="#cb26-2" tabindex="-1"></a>problematic_sex <span class="ot">&lt;-</span> problematic_sex[,<span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>]</span>
+<span id="cb26-3"><a href="#cb26-3" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">paste0</span>(<span class="st">&quot;Number of samples with problematic sex assignment: &quot;</span>,<span class="fu">nrow</span>(problematic_sex)))</span></code></pre></div>
+<pre><code>## [1] &quot;Number of samples with problematic sex assignment: 4&quot;</code></pre>
+<div class="sourceCode" id="cb28"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" tabindex="-1"></a><span class="fu">write.table</span>(problematic_sex,<span class="at">file =</span> <span class="fu">paste0</span>(DataDir,<span class="st">&quot;/problematic_sex_samples&quot;</span>),<span class="at">quote =</span> F, <span class="at">row.names =</span> F,<span class="at">col.names =</span> F)</span>
+<span id="cb28-2"><a href="#cb28-2" tabindex="-1"></a>SexCheckResult[<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>,]</span></code></pre></div>
+<table>
+<thead>
+<tr class="header">
+<th align="left">FID</th>
+<th align="left">IID</th>
+<th align="right">PEDSEX</th>
+<th align="right">SNPSEX</th>
+<th align="left">STATUS</th>
+<th align="right">F</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">EUR_FIN</td>
+<td align="left">HG00171</td>
+<td align="right">2</td>
+<td align="right">2</td>
+<td align="left">OK</td>
+<td align="right">0.081780</td>
+</tr>
+<tr class="even">
+<td align="left">EUR_FIN</td>
+<td align="left">HG00173</td>
+<td align="right">2</td>
+<td align="right">2</td>
+<td align="left">OK</td>
+<td align="right">-0.031060</td>
+</tr>
+<tr class="odd">
+<td align="left">EUR_FIN</td>
+<td align="left">HG00174</td>
+<td align="right">2</td>
+<td align="right">2</td>
+<td align="left">OK</td>
+<td align="right">0.058430</td>
+</tr>
+<tr class="even">
+<td align="left">EUR_FIN</td>
+<td align="left">HG00176</td>
+<td align="right">2</td>
+<td align="right">2</td>
+<td align="left">OK</td>
+<td align="right">-0.023280</td>
+</tr>
+<tr class="odd">
+<td align="left">EUR_FIN</td>
+<td align="left">HG00177</td>
+<td align="right">2</td>
+<td align="right">2</td>
+<td align="left">OK</td>
+<td align="right">-0.003822</td>
+</tr>
+</tbody>
+</table>
+<p>Note, there is no filtering of the samples based on sex
+prediction.</p>
+<p>This function uses X chromosome data to determine sex (i.e. based on
+heterozygosity rates) and flags individuals for whom the reported sex in
+the PED file does not match the estimated sex (given genomic data).</p>
+<p>A PROBLEM arises if the two sexes do not match, or if the SNP data or
+pedigree data are ambiguous with regard to sex. A male call is made if F
+is more than 0.8; a female call is made if F is less than 0.2.</p>
+<p>SNPSEX Sex as determined by X chromosome</p>
+<p>F The actual X chromosome inbreeding (homozygosity) estimate</p>
+<p>Users have the ability to impute the sex for their dataset.</p>
+</div>
+<div id="step-5-filter-for-needed-chromosomes." class="section level2">
+<h2>Step 5: Filter for needed chromosomes.</h2>
+<p>We prefer to keep only chromosome 1 to 23.</p>
+<div class="sourceCode" id="cb29"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" tabindex="-1"></a>test1 <span class="ot">&lt;-</span> <span class="fu">read.table</span>(<span class="fu">paste0</span>(DataDir,<span class="st">&quot;/&quot;</span>,finput,<span class="st">&quot;.bim&quot;</span>))</span>
+<span id="cb29-2"><a href="#cb29-2" tabindex="-1"></a><span class="fu">unique</span>(test1<span class="sc">$</span>V1)</span></code></pre></div>
+<pre><code>##  [1]  1  2  3  4  5  6  7  8  9 10 23</code></pre>
+<div class="sourceCode" id="cb31"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" tabindex="-1"></a>foutput <span class="ot">&lt;-</span> <span class="st">&quot;PreimputeEX_QC2&quot;</span></span>
+<span id="cb31-2"><a href="#cb31-2" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">FilterRegion</span>(<span class="at">DataDir =</span> DataDir, <span class="at">ResultDir =</span> ResultDir, <span class="at">finput =</span> finput, <span class="at">foutput =</span> foutput, <span class="at">CHRX =</span> <span class="cn">FALSE</span>, <span class="at">CHRY =</span> <span class="cn">FALSE</span>, <span class="at">filterPAR =</span> <span class="cn">FALSE</span>, <span class="at">filterXTR =</span> <span class="cn">FALSE</span>, <span class="at">filterAmpliconic =</span> <span class="cn">FALSE</span>, <span class="at">regionfile =</span> <span class="cn">FALSE</span>, <span class="at">filterCHR =</span> <span class="fu">c</span>(<span class="dv">24</span>, <span class="dv">25</span>, <span class="dv">26</span>),<span class="at">Hg =</span> <span class="st">&quot;38&quot;</span>, <span class="at">exclude =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;</code></pre>
+<p>Copying the plink files from ResultDir to DataDir.</p>
+<div class="sourceCode" id="cb33"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;PreimputeEX_QC2&quot;</span>)</span>
+<span id="cb33-2"><a href="#cb33-2" tabindex="-1"></a><span class="fu">file.copy</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>,ftemp),DataDir)</span></code></pre></div>
+<pre><code>## [1] FALSE FALSE FALSE FALSE FALSE</code></pre>
+<div class="sourceCode" id="cb35"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" tabindex="-1"></a><span class="fu">PlinkSummary</span>(DataDir, ResultDir, <span class="at">finput =</span> <span class="st">&quot;PreimputeEX_QC2&quot;</span>)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;Dataset:PreimputeEX_QC2&quot;
+## [1] &quot;Number of missing phenotypes:0&quot;
+## [1] &quot;Number of males:125&quot;
+## [1] &quot;Number of females:151&quot;
+## [1] &quot;This is a case-control data.&quot;
+## [1] &quot;Number of cases:108&quot;
+## [1] &quot;Number of controls:168&quot;
+## [1] &quot;Number of cases in males:53&quot;
+## [1] &quot;Number of controls in males:72&quot;
+## [1] &quot;Number of cases in females:55&quot;
+## [1] &quot;Number of controls in females:96&quot;
+## [1] &quot;Number of chromosomes:11&quot;
+##  [1] &quot;Chr:1&quot;  &quot;Chr:2&quot;  &quot;Chr:3&quot;  &quot;Chr:4&quot;  &quot;Chr:5&quot;  &quot;Chr:6&quot;  &quot;Chr:7&quot;  &quot;Chr:8&quot; 
+##  [9] &quot;Chr:9&quot;  &quot;Chr:10&quot; &quot;Chr:23&quot;
+## [1] &quot;Total number of SNPs:22302&quot;
+## [1] &quot;Total number of samples:276&quot;</code></pre>
+<pre><code>## NULL</code></pre>
+</div>
+<div id="step-6-second-round-of-snp-filtering." class="section level2">
+<h2>Step 6: Second round of SNP filtering.</h2>
+<div class="sourceCode" id="cb38"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" tabindex="-1"></a><span class="fu">library</span>(GXwasR)</span>
+<span id="cb38-2"><a href="#cb38-2" tabindex="-1"></a>finput <span class="ot">&lt;-</span> <span class="st">&quot;PreimputeEX_QC2&quot;</span></span>
+<span id="cb38-3"><a href="#cb38-3" tabindex="-1"></a>foutput <span class="ot">&lt;-</span> <span class="st">&quot;PreimputeEX_QC3&quot;</span></span>
+<span id="cb38-4"><a href="#cb38-4" tabindex="-1"></a>geno <span class="ot">&lt;-</span> <span class="fl">0.02</span></span>
+<span id="cb38-5"><a href="#cb38-5" tabindex="-1"></a>maf <span class="ot">&lt;-</span> <span class="fl">0.01</span></span>
+<span id="cb38-6"><a href="#cb38-6" tabindex="-1"></a>casecontrol <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb38-7"><a href="#cb38-7" tabindex="-1"></a>caldiffmiss <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb38-8"><a href="#cb38-8" tabindex="-1"></a>diffmissFilter <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb38-9"><a href="#cb38-9" tabindex="-1"></a>dmissX <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb38-10"><a href="#cb38-10" tabindex="-1"></a>dmissAutoY <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb38-11"><a href="#cb38-11" tabindex="-1"></a>monomorphicSNPs <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb38-12"><a href="#cb38-12" tabindex="-1"></a>ld_prunning <span class="ot">&lt;-</span> <span class="cn">FALSE</span></span>
+<span id="cb38-13"><a href="#cb38-13" tabindex="-1"></a>hwe <span class="ot">=</span> <span class="cn">NULL</span></span>
+<span id="cb38-14"><a href="#cb38-14" tabindex="-1"></a>hweCase <span class="ot">&lt;-</span> <span class="fl">1e-10</span></span>
+<span id="cb38-15"><a href="#cb38-15" tabindex="-1"></a>hweControl <span class="ot">&lt;-</span> <span class="fl">1e-06</span></span>
+<span id="cb38-16"><a href="#cb38-16" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">QCsnp</span>(<span class="at">DataDir =</span> DataDir, <span class="at">ResultDir =</span> ResultDir, <span class="at">finput =</span> finput,<span class="at">foutput =</span> foutput, <span class="at">geno =</span> geno, <span class="at">maf =</span> maf,<span class="at">hweCase =</span> hweCase, <span class="at">hweControl =</span> hweControl, <span class="at">ld_prunning =</span> ld_prunning, <span class="at">casecontrol =</span> casecontrol, <span class="at">monomorphicSNPs =</span> monomorphicSNPs, <span class="at">caldiffmiss =</span> caldiffmiss, <span class="at">dmissX =</span> dmissX, <span class="at">dmissAutoY =</span> dmissAutoY, <span class="at">diffmissFilter =</span> diffmissFilter)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;0 Ambiguous SNPs (A-T/G-C), indels etc. were removed.&quot;
+## [1] &quot;Thresholds for maf, geno and hwe worked.&quot;
+## [1] &quot;0 variants removed due to missing genotype data (--geno).&quot;
+## [2] &quot;1930 variants removed due to minor allele threshold(s)&quot;   
+## [1] &quot;In cases,  1 variant removed due to Hardy-Weinberg exact test.&quot;
+## [1] &quot;In controls,  19 variants removed due to Hardy-Weinberg exact test.&quot;
+## [1] &quot;Program is set up.&quot;
+## [1] &quot;Merging is done using the common SNPs between the input genotype files.&quot;
+## [1] &quot;Plink files with merged regions are in C:\\Users\\Sarah\\AppData\\Local\\Temp\\RtmpAZbmeB prefixed as filtered_temp2&quot;
+## [1] &quot;There are no monomorphic SNPs.&quot;
+## [1] &quot;No SNP with differential missingness between cases and controls.&quot;
+## [1] &quot;Output plink files prefixed as ,PreimputeEX_QC3, with passed SNPs are saved in ResultDir.&quot;
+## [1] &quot;Input file has 22302 SNPs.&quot;
+## [1] &quot;Output file has 20353 SNPs after filtering.&quot;</code></pre>
+<p>Copying the plink files from ResultDir to DataDir.</p>
+<div class="sourceCode" id="cb40"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;PreimputeEX_QC3&quot;</span>)</span>
+<span id="cb40-2"><a href="#cb40-2" tabindex="-1"></a><span class="fu">file.copy</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>,ftemp),DataDir)</span></code></pre></div>
+<pre><code>## [1] FALSE FALSE FALSE FALSE</code></pre>
+<div class="sourceCode" id="cb42"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" tabindex="-1"></a><span class="fu">PlinkSummary</span>(DataDir, ResultDir, <span class="at">finput =</span> <span class="st">&quot;PreimputeEX_QC3&quot;</span>)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;Dataset:PreimputeEX_QC3&quot;
+## [1] &quot;Number of missing phenotypes:0&quot;
+## [1] &quot;Number of males:125&quot;
+## [1] &quot;Number of females:151&quot;
+## [1] &quot;This is a case-control data.&quot;
+## [1] &quot;Number of cases:108&quot;
+## [1] &quot;Number of controls:168&quot;
+## [1] &quot;Number of cases in males:53&quot;
+## [1] &quot;Number of controls in males:72&quot;
+## [1] &quot;Number of cases in females:55&quot;
+## [1] &quot;Number of controls in females:96&quot;
+## [1] &quot;Number of chromosomes:11&quot;
+##  [1] &quot;Chr:1&quot;  &quot;Chr:2&quot;  &quot;Chr:3&quot;  &quot;Chr:4&quot;  &quot;Chr:5&quot;  &quot;Chr:6&quot;  &quot;Chr:7&quot;  &quot;Chr:8&quot; 
+##  [9] &quot;Chr:9&quot;  &quot;Chr:10&quot; &quot;Chr:23&quot;
+## [1] &quot;Total number of SNPs:20353&quot;
+## [1] &quot;Total number of samples:276&quot;</code></pre>
+<pre><code>## NULL</code></pre>
+</div>
+<div id="step-7-second-round-of-sample-filtering" class="section level2">
+<h2>Step 7: Second round of sample filtering</h2>
+<p>Here we are using stringent thresholds for sample filter.</p>
+<div class="sourceCode" id="cb45"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" tabindex="-1"></a>finput <span class="ot">&lt;-</span> <span class="st">&quot;PreimputeEX_QC3&quot;</span></span>
+<span id="cb45-2"><a href="#cb45-2" tabindex="-1"></a>foutput <span class="ot">&lt;-</span> <span class="st">&quot;PreimputeEX_QC4&quot;</span></span>
+<span id="cb45-3"><a href="#cb45-3" tabindex="-1"></a>imiss <span class="ot">=</span> <span class="fl">0.02</span></span>
+<span id="cb45-4"><a href="#cb45-4" tabindex="-1"></a>het <span class="ot">=</span> <span class="dv">3</span></span>
+<span id="cb45-5"><a href="#cb45-5" tabindex="-1"></a>IBD <span class="ot">=</span> <span class="fl">0.2</span></span>
+<span id="cb45-6"><a href="#cb45-6" tabindex="-1"></a>IBDmatrix <span class="ot">=</span> <span class="cn">FALSE</span></span>
+<span id="cb45-7"><a href="#cb45-7" tabindex="-1"></a>small_sample_mod <span class="ot">=</span> <span class="cn">TRUE</span></span>
+<span id="cb45-8"><a href="#cb45-8" tabindex="-1"></a>filterSample <span class="ot">=</span> <span class="cn">TRUE</span></span>
+<span id="cb45-9"><a href="#cb45-9" tabindex="-1"></a>ambi_out <span class="ot">=</span> <span class="cn">TRUE</span></span>
+<span id="cb45-10"><a href="#cb45-10" tabindex="-1"></a>x <span class="ot">=</span> <span class="fu">QCsample</span>(<span class="at">DataDir =</span> DataDir,<span class="at">ResultDir =</span> ResultDir, <span class="at">finput =</span> finput,<span class="at">foutput =</span> foutput, <span class="at">imiss =</span> imiss,<span class="at">het =</span> het, <span class="at">IBD =</span> IBD, <span class="at">IBDmatrix =</span> IBDmatrix, <span class="at">filterSample =</span> filterSample, <span class="at">ambi_out =</span> ambi_out)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;Plots are initiated.&quot;</code></pre>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<pre><code>## [1] &quot;No. of samples filtered/flagged for missingness: 0&quot;
+## [1] &quot;No. of samples filtered/flagged for heterozygosity: 0&quot;
+## [1] &quot;No. of samples filtered for missingness and heterozygosity: 0&quot;
+## [1] &quot;No. of samples marked to be filtered out for IDB after missingness and heterozygosity filter: 2&quot;
+## [1] &quot;No. of samples in input plink files: 276&quot;
+## [1] &quot;No. of samples in output plink files: 274&quot;
+## [1] &quot;Output plink files, PreimputeEX_QC4 with final samples are in C:\\Users\\Sarah\\AppData\\Local\\Temp\\RtmpAZbmeB.&quot;</code></pre>
+<p>Copying the plink files from ResultDir to DataDir.</p>
+<div class="sourceCode" id="cb48"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" tabindex="-1"></a>ftemp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>),<span class="at">pattern =</span> <span class="st">&quot;PreimputeEX_QC4&quot;</span>)</span>
+<span id="cb48-2"><a href="#cb48-2" tabindex="-1"></a><span class="fu">file.copy</span>(<span class="fu">paste0</span>(ResultDir,<span class="st">&quot;/&quot;</span>,ftemp),DataDir)</span></code></pre></div>
+<pre><code>## [1] FALSE FALSE FALSE FALSE</code></pre>
+<div class="sourceCode" id="cb50"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" tabindex="-1"></a><span class="fu">PlinkSummary</span>(DataDir, ResultDir, <span class="at">finput =</span> <span class="st">&quot;PreimputeEX_QC4&quot;</span>)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;Dataset:PreimputeEX_QC4&quot;
+## [1] &quot;Number of missing phenotypes:0&quot;
+## [1] &quot;Number of males:124&quot;
+## [1] &quot;Number of females:150&quot;
+## [1] &quot;This is a case-control data.&quot;
+## [1] &quot;Number of cases:106&quot;
+## [1] &quot;Number of controls:168&quot;
+## [1] &quot;Number of cases in males:52&quot;
+## [1] &quot;Number of controls in males:72&quot;
+## [1] &quot;Number of cases in females:54&quot;
+## [1] &quot;Number of controls in females:96&quot;
+## [1] &quot;Number of chromosomes:11&quot;
+##  [1] &quot;Chr:1&quot;  &quot;Chr:2&quot;  &quot;Chr:3&quot;  &quot;Chr:4&quot;  &quot;Chr:5&quot;  &quot;Chr:6&quot;  &quot;Chr:7&quot;  &quot;Chr:8&quot; 
+##  [9] &quot;Chr:9&quot;  &quot;Chr:10&quot; &quot;Chr:23&quot;
+## [1] &quot;Total number of SNPs:20353&quot;
+## [1] &quot;Total number of samples:274&quot;</code></pre>
+<pre><code>## NULL</code></pre>
+</div>
+<div id="step-8-ancestry-check" class="section level2">
+<h2>Step 8: Ancestry check</h2>
+<p>Prior to use this function, users are highly encouraged to read our
+tutorial ““Decoding Ancestry: A Guide to Using GXwasR for Genetic
+Ancestry Estimation”.</p>
+<div class="sourceCode" id="cb53"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" tabindex="-1"></a>finput <span class="ot">&lt;-</span> <span class="st">&quot;PreimputeEX_QC4&quot;</span></span>
+<span id="cb53-2"><a href="#cb53-2" tabindex="-1"></a>reference <span class="ot">&lt;-</span> <span class="st">&quot;HapMapIII_NCBI36&quot;</span></span>
+<span id="cb53-3"><a href="#cb53-3" tabindex="-1"></a>highLD_regions <span class="ot">&lt;-</span> highLD_hg19</span>
+<span id="cb53-4"><a href="#cb53-4" tabindex="-1"></a>study_pop <span class="ot">&lt;-</span> example_data_study_sample_ancestry</span>
+<span id="cb53-5"><a href="#cb53-5" tabindex="-1"></a>studyLD_window_size <span class="ot">=</span> <span class="dv">50</span></span>
+<span id="cb53-6"><a href="#cb53-6" tabindex="-1"></a>studyLD_step_size <span class="ot">=</span> <span class="dv">5</span></span>
+<span id="cb53-7"><a href="#cb53-7" tabindex="-1"></a>studyLD_r2_threshold <span class="ot">=</span> <span class="fl">0.02</span></span>
+<span id="cb53-8"><a href="#cb53-8" tabindex="-1"></a>filterSNP <span class="ot">=</span> <span class="cn">TRUE</span></span>
+<span id="cb53-9"><a href="#cb53-9" tabindex="-1"></a>studyLD <span class="ot">=</span> <span class="cn">TRUE</span></span>
+<span id="cb53-10"><a href="#cb53-10" tabindex="-1"></a>referLD <span class="ot">=</span> <span class="cn">TRUE</span></span>
+<span id="cb53-11"><a href="#cb53-11" tabindex="-1"></a>referLD_window_size <span class="ot">=</span> <span class="dv">50</span></span>
+<span id="cb53-12"><a href="#cb53-12" tabindex="-1"></a>referLD_step_size <span class="ot">=</span> <span class="dv">5</span></span>
+<span id="cb53-13"><a href="#cb53-13" tabindex="-1"></a>referLD_r2_threshold <span class="ot">=</span> <span class="fl">0.02</span></span>
+<span id="cb53-14"><a href="#cb53-14" tabindex="-1"></a>outlier <span class="ot">=</span> <span class="cn">TRUE</span></span>
+<span id="cb53-15"><a href="#cb53-15" tabindex="-1"></a>outlier_threshold <span class="ot">=</span> <span class="dv">3</span></span>
+<span id="cb53-16"><a href="#cb53-16" tabindex="-1"></a>outlierOf <span class="ot">=</span> <span class="st">&quot;EUR&quot;</span></span>
+<span id="cb53-17"><a href="#cb53-17" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">AncestryCheck</span>(<span class="at">DataDir =</span> DataDir,</span>
+<span id="cb53-18"><a href="#cb53-18" tabindex="-1"></a>    <span class="at">ResultDir =</span> ResultDir,</span>
+<span id="cb53-19"><a href="#cb53-19" tabindex="-1"></a>    <span class="at">finput =</span> finput,</span>
+<span id="cb53-20"><a href="#cb53-20" tabindex="-1"></a>    <span class="at">reference =</span> reference,</span>
+<span id="cb53-21"><a href="#cb53-21" tabindex="-1"></a>    <span class="at">filterSNP =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb53-22"><a href="#cb53-22" tabindex="-1"></a>    <span class="at">studyLD =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb53-23"><a href="#cb53-23" tabindex="-1"></a>    <span class="at">studyLD_window_size =</span> <span class="dv">50</span>,</span>
+<span id="cb53-24"><a href="#cb53-24" tabindex="-1"></a>    <span class="at">studyLD_step_size =</span> <span class="dv">5</span>,</span>
+<span id="cb53-25"><a href="#cb53-25" tabindex="-1"></a>    <span class="at">studyLD_r2_threshold =</span> <span class="fl">0.02</span>,</span>
+<span id="cb53-26"><a href="#cb53-26" tabindex="-1"></a>    <span class="at">referLD =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb53-27"><a href="#cb53-27" tabindex="-1"></a>    <span class="at">referLD_window_size =</span> <span class="dv">50</span>,</span>
+<span id="cb53-28"><a href="#cb53-28" tabindex="-1"></a>    <span class="at">referLD_step_size =</span> <span class="dv">5</span>,</span>
+<span id="cb53-29"><a href="#cb53-29" tabindex="-1"></a>    <span class="at">referLD_r2_threshold =</span> <span class="fl">0.02</span>,</span>
+<span id="cb53-30"><a href="#cb53-30" tabindex="-1"></a>    <span class="at">highLD_regions =</span> highLD_regions,</span>
+<span id="cb53-31"><a href="#cb53-31" tabindex="-1"></a>    <span class="at">study_pop =</span> study_pop,</span>
+<span id="cb53-32"><a href="#cb53-32" tabindex="-1"></a>    <span class="at">outlier =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb53-33"><a href="#cb53-33" tabindex="-1"></a>    <span class="at">outlierOf =</span> <span class="st">&quot;EUR&quot;</span>,</span>
+<span id="cb53-34"><a href="#cb53-34" tabindex="-1"></a>    <span class="at">outlier_threshold =</span> <span class="dv">3</span>)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;Reference data &#39;HapMapIII_NCBI36&#39; downloaded and extracted in C:\\Users\\Sarah\\AppData\\Local\\Temp\\RtmpAZbmeB.&quot;
+## [1] &quot;No SNP had &#39;A-T&#39; and &#39;G-C&#39; in study data.&quot;
+## [1] &quot;111854 SNPs were &#39;A-T&#39; and &#39;G-C&#39; in reference data. These SNPs were removed.&quot;
+## [1] &quot;LD pruning was done for study dataset.&quot;
+## [1] &quot;LD pruning for reference dataset is recommended. Set referLD == TRUE.&quot;
+## [1] &quot;PCA done.&quot;</code></pre>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<pre><code>## [1] &quot;407 allele flips identified between study and reference data.&quot;
+## [1] &quot;3453 SNPs were finally retained in study and reference data after correcting for position mismatch and allele flips.&quot;
+## [1] &quot;22 samples are outliers of selected reference population.&quot;
+## [1] &quot;164 samples are NOT outliers of selected reference population.&quot;</code></pre>
+<div class="sourceCode" id="cb56"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb56-1"><a href="#cb56-1" tabindex="-1"></a>Samples_with_predicted_ancestry <span class="ot">&lt;-</span> x[[<span class="st">&quot;Samples_with_predicted_ancestry&quot;</span>]]</span>
+<span id="cb56-2"><a href="#cb56-2" tabindex="-1"></a></span>
+<span id="cb56-3"><a href="#cb56-3" tabindex="-1"></a>outlier <span class="ot">&lt;-</span> x[[<span class="st">&quot;Outlier_samples&quot;</span>]]</span>
+<span id="cb56-4"><a href="#cb56-4" tabindex="-1"></a></span>
+<span id="cb56-5"><a href="#cb56-5" tabindex="-1"></a>outlier</span></code></pre></div>
+<table>
+<thead>
+<tr class="header">
+<th align="left">FID</th>
+<th align="left">IID</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">EUR_GBR</td>
+<td align="left">HG00151</td>
+</tr>
+<tr class="even">
+<td align="left">EUR_FIN</td>
+<td align="left">HG00171</td>
+</tr>
+<tr class="odd">
+<td align="left">EUR_FIN</td>
+<td align="left">HG00177</td>
+</tr>
+<tr class="even">
+<td align="left">EUR_FIN</td>
+<td align="left">HG00179</td>
+</tr>
+<tr class="odd">
+<td align="left">EUR_FIN</td>
+<td align="left">HG00180</td>
+</tr>
+<tr class="even">
+<td align="left">EUR_FIN</td>
+<td align="left">HG00185</td>
+</tr>
+<tr class="odd">
+<td align="left">EUR_FIN</td>
+<td align="left">HG00189</td>
+</tr>
+<tr class="even">
+<td align="left">EUR_FIN</td>
+<td align="left">HG00269</td>
+</tr>
+<tr class="odd">
+<td align="left">EUR_FIN</td>
+<td align="left">HG00272</td>
+</tr>
+<tr class="even">
+<td align="left">EUR_FIN</td>
+<td align="left">HG00273</td>
+</tr>
+<tr class="odd">
+<td align="left">EUR_FIN</td>
+<td align="left">HG00277</td>
+</tr>
+<tr class="even">
+<td align="left">EUR_FIN</td>
+<td align="left">HG00319</td>
+</tr>
+<tr class="odd">
+<td align="left">EUR_FIN</td>
+<td align="left">HG00321</td>
+</tr>
+<tr class="even">
+<td align="left">EUR_FIN</td>
+<td align="left">HG00324</td>
+</tr>
+<tr class="odd">
+<td align="left">EUR_FIN</td>
+<td align="left">HG00345</td>
+</tr>
+<tr class="even">
+<td align="left">EUR_FIN</td>
+<td align="left">HG00349</td>
+</tr>
+<tr class="odd">
+<td align="left">EUR_FIN</td>
+<td align="left">HG00358</td>
+</tr>
+<tr class="even">
+<td align="left">EUR_FIN</td>
+<td align="left">HG00361</td>
+</tr>
+<tr class="odd">
+<td align="left">EUR_FIN</td>
+<td align="left">HG00364</td>
+</tr>
+<tr class="even">
+<td align="left">EUR_FIN</td>
+<td align="left">HG00366</td>
+</tr>
+<tr class="odd">
+<td align="left">EUR_FIN</td>
+<td align="left">HG00367</td>
+</tr>
+<tr class="even">
+<td align="left">EUR_FIN</td>
+<td align="left">HG00377</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb57"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1" tabindex="-1"></a>Samples_with_predicted_ancestry[<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>,]</span></code></pre></div>
+<table>
+<thead>
+<tr class="header">
+<th align="left">FID</th>
+<th align="left">IID</th>
+<th align="left">Predicted Ancestry</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">EUR_GBR</td>
+<td align="left">HG00096</td>
+<td align="left">EUR</td>
+</tr>
+<tr class="even">
+<td align="left">EUR_GBR</td>
+<td align="left">HG00097</td>
+<td align="left">EUR</td>
+</tr>
+<tr class="odd">
+<td align="left">EUR_GBR</td>
+<td align="left">HG00099</td>
+<td align="left">EUR</td>
+</tr>
+<tr class="even">
+<td align="left">EUR_GBR</td>
+<td align="left">HG00100</td>
+<td align="left">EUR</td>
+</tr>
+<tr class="odd">
+<td align="left">EUR_GBR</td>
+<td align="left">HG00101</td>
+<td align="left">EUR</td>
+</tr>
+</tbody>
+</table>
+<p>There was no outlier samples.</p>
+</div>
+<div id="step-9-third-round-of-snp-filtering" class="section level2">
+<h2>Step 9: Third round of SNP filtering</h2>
+<p>To make sure all the filtering thresholds for SNPs are maintained
+after sample filtering.</p>
+<div class="sourceCode" id="cb58"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb58-1"><a href="#cb58-1" tabindex="-1"></a><span class="fu">library</span>(GXwasR)</span>
+<span id="cb58-2"><a href="#cb58-2" tabindex="-1"></a>finput <span class="ot">&lt;-</span> <span class="st">&quot;PreimputeEX_QC4&quot;</span></span>
+<span id="cb58-3"><a href="#cb58-3" tabindex="-1"></a>foutput <span class="ot">&lt;-</span> <span class="st">&quot;Preimpute_Final&quot;</span></span>
+<span id="cb58-4"><a href="#cb58-4" tabindex="-1"></a>geno <span class="ot">&lt;-</span> <span class="fl">0.02</span></span>
+<span id="cb58-5"><a href="#cb58-5" tabindex="-1"></a>maf <span class="ot">&lt;-</span> <span class="fl">0.01</span></span>
+<span id="cb58-6"><a href="#cb58-6" tabindex="-1"></a>casecontrol <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb58-7"><a href="#cb58-7" tabindex="-1"></a>caldiffmiss <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb58-8"><a href="#cb58-8" tabindex="-1"></a>diffmissFilter <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb58-9"><a href="#cb58-9" tabindex="-1"></a>dmissX <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb58-10"><a href="#cb58-10" tabindex="-1"></a>dmissAutoY <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb58-11"><a href="#cb58-11" tabindex="-1"></a>monomorphicSNPs <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb58-12"><a href="#cb58-12" tabindex="-1"></a>ld_prunning <span class="ot">&lt;-</span> <span class="cn">FALSE</span></span>
+<span id="cb58-13"><a href="#cb58-13" tabindex="-1"></a> hwe <span class="ot">=</span> <span class="cn">NULL</span></span>
+<span id="cb58-14"><a href="#cb58-14" tabindex="-1"></a>hweCase <span class="ot">&lt;-</span> <span class="fl">1e-10</span></span>
+<span id="cb58-15"><a href="#cb58-15" tabindex="-1"></a>hweControl <span class="ot">&lt;-</span> <span class="fl">1e-06</span></span>
+<span id="cb58-16"><a href="#cb58-16" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">QCsnp</span>(<span class="at">DataDir =</span> ResultDir, <span class="at">ResultDir =</span> ResultDir, <span class="at">finput =</span> finput,<span class="at">foutput =</span> foutput, <span class="at">geno =</span> geno, <span class="at">maf =</span> maf,<span class="at">hweCase =</span> hweCase, <span class="at">hweControl =</span> hweControl, <span class="at">ld_prunning =</span> ld_prunning, <span class="at">casecontrol =</span> casecontrol, <span class="at">monomorphicSNPs =</span> monomorphicSNPs, <span class="at">caldiffmiss =</span> caldiffmiss, <span class="at">dmissX =</span> dmissX, <span class="at">dmissAutoY =</span> dmissAutoY, <span class="at">diffmissFilter =</span> diffmissFilter)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;0 Ambiguous SNPs (A-T/G-C), indels etc. were removed.&quot;
+## [1] &quot;Thresholds for maf, geno and hwe worked.&quot;
+## [1] &quot;0 variants removed due to missing genotype data (--geno).&quot;
+## [2] &quot;3 variants removed due to minor allele threshold(s)&quot;      
+## [1] &quot;In cases,  0 variants removed due to Hardy-Weinberg exact test.&quot;
+## [1] &quot;In controls,  0 variants removed due to Hardy-Weinberg exact test.&quot;
+## [1] &quot;Program is set up.&quot;
+## [1] &quot;Merging is done using the common SNPs between the input genotype files.&quot;
+## [1] &quot;Plink files with merged regions are in C:\\Users\\Sarah\\AppData\\Local\\Temp\\RtmpAZbmeB prefixed as filtered_temp2&quot;
+## [1] &quot;There are no monomorphic SNPs.&quot;
+## [1] &quot;No SNP with differential missingness between cases and controls.&quot;
+## [1] &quot;Output plink files prefixed as ,Preimpute_Final, with passed SNPs are saved in ResultDir.&quot;
+## [1] &quot;Input file has 20353 SNPs.&quot;
+## [1] &quot;Output file has 20350 SNPs after filtering.&quot;</code></pre>
+</div>
+<div id="final-summary-of-final-qc-ed-dataset." class="section level2">
+<h2>Final Summary of final Qc-ed dataset.</h2>
+<div class="sourceCode" id="cb60"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb60-1"><a href="#cb60-1" tabindex="-1"></a><span class="fu">PlinkSummary</span>(ResultDir,ResultDir,foutput)</span></code></pre></div>
+<pre><code>## [1] &quot;Program is set up.&quot;
+## [1] &quot;Dataset:Preimpute_Final&quot;
+## [1] &quot;Number of missing phenotypes:0&quot;
+## [1] &quot;Number of males:124&quot;
+## [1] &quot;Number of females:150&quot;
+## [1] &quot;This is a case-control data.&quot;
+## [1] &quot;Number of cases:106&quot;
+## [1] &quot;Number of controls:168&quot;
+## [1] &quot;Number of cases in males:52&quot;
+## [1] &quot;Number of controls in males:72&quot;
+## [1] &quot;Number of cases in females:54&quot;
+## [1] &quot;Number of controls in females:96&quot;
+## [1] &quot;Number of chromosomes:11&quot;
+##  [1] &quot;Chr:1&quot;  &quot;Chr:2&quot;  &quot;Chr:3&quot;  &quot;Chr:4&quot;  &quot;Chr:5&quot;  &quot;Chr:6&quot;  &quot;Chr:7&quot;  &quot;Chr:8&quot; 
+##  [9] &quot;Chr:9&quot;  &quot;Chr:10&quot; &quot;Chr:23&quot;
+## [1] &quot;Total number of SNPs:20350&quot;
+## [1] &quot;Total number of samples:274&quot;</code></pre>
+<pre><code>## NULL</code></pre>
+</div>
+<div id="citation" class="section level2">
+<h2>Citation</h2>
+<p>If you are using GXwasR package and/or following this pipeline in
+your study, please cite it as:</p>
+<div class="sourceCode" id="cb63"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb63-1"><a href="#cb63-1" tabindex="-1"></a><span class="fu">citation</span>(<span class="st">&quot;GXwasR&quot;</span>)</span></code></pre></div>
+<pre><code>## To cite package &#39;GXwasR&#39; in publications use:
+## 
+##   Bose B (2024). _GXwasR: A tool for conducting sex-aware quality
+##   control, association analysis, and testing various models of
+##   sex-dependent genetic effects in complex traits_. R package version
+##   x.x.x, &lt;http://example.com/YourPackageName&gt;.
+## 
+## A BibTeX entry for LaTeX users is
+## 
+##   @Manual{,
+##     title = {GXwasR: A tool for conducting sex-aware quality control, association analysis, and testing various models of sex-dependent genetic effects in complex traits},
+##     author = {Banabithi Bose},
+##     year = {2024},
+##     note = {R package version x.x.x},
+##     url = {http://example.com/YourPackageName},
+##   }</code></pre>
+</div>
+<div id="tutorials-link-this-will-be-updated-with-the-publication." class="section level2">
+<h2>Tutorials Link (This will be updated with the publication.)</h2>
+<p><strong>Please follow these tutorials to know more about the
+functionality of the package GXwasR.</strong></p>
+<p>A list of all the functions in GXwasR:</p>
+<p>Tutorial for performing post-imputation QC followed by sex-aware
+association tests:</p>
+<p>Tutorial for performing pre-imputation QC using GXwasR:</p>
+<p>Tutorial for performing post-imputation QC using GXwasR:</p>
+<p>Tutorial for sex-combined and sex-stratified GWAS with
+XWAS:<strong>hdhghchjfvjh</strong></p>
+<p>Tutorial for sex-differential test:<strong>gdhgdcmh</strong></p>
+<p>Tutorial for ancestry estimation:</p>
+<p>Tutorial for computing polygenic risk
+score:<strong>jcjjcjh</strong></p>
+<p>Tutorial for meta analysis:</p>
+<p>Tutorial for heritability estimate and genetic correlation:</p>
+<p>Tutorial for gene-based tests:</p>
+<pre><code>                              ******************* THANK YOU! *************************</code></pre>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
