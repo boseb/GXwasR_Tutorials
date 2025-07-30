@@ -1,2 +1,2 @@
 # GXwasR_Tutorials
-A repository with .Rmd files for the tutorials using the GXwasR software.
+A repository with HTML and .Rmd files for the tutorials using the GXwasR software.
