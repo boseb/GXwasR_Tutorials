@@ -7,7 +7,7 @@ Welcome to the GXwasR tutorial hub — a central location for learning how
 to use the GXwasR R package for genome-wide and x-chromosome wide
 association studies, quality control, ancestry estimation, and more.
 
-> ⚠️ These tutorials are now also available via the [GXwasR pkgdown
+> ⚠️ These tutorials are now available via the [GXwasR pkgdown
 > site](https://github.com/boseb/GXwasR), though this repository remains
 > as a familiar entry point for users and contributors.
 
