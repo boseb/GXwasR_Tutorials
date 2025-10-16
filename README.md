@@ -43,9 +43,9 @@ association studies, quality control, ancestry estimation, and more.
 ### 🧠 Polygenic Score
 
 - [Polygenic Score
-  (PRS)](https://boseb.github.io/GXwasR/articles/GXwasR_PGS.html)
+  (PGS)](https://boseb.github.io/GXwasR/articles/GXwasR_PGS.html)
 
-  Calculating and interpreting PRS using summary stats and genotype
+  Calculating and interpreting PGS using summary stats and genotype
   data.
 
 ### 🌍 Ancestry & Population Structure
