@@ -40,10 +40,10 @@ association studies, quality control, ancestry estimation, and more.
 
   Running association models using GXwasR.
 
-### 🧠 Polygenic Risk
+### 🧠 Polygenic Score
 
-- [Polygenic Risk Score
-  (PRS)](https://boseb.github.io/GXwasR/articles/GXwasR_PRS.html)
+- [Polygenic Score
+  (PRS)](https://boseb.github.io/GXwasR/articles/GXwasR_PGS.html)
 
   Calculating and interpreting PRS using summary stats and genotype
   data.
@@ -54,6 +54,9 @@ association studies, quality control, ancestry estimation, and more.
   Estimation](https://boseb.github.io/GXwasR/articles/decoding_ancestry.html)
 
   Estimate population structure using reference panels and PCA/SVD.
+
+- [Heritability
+  Estimation](https://boseb.github.io/GXwasR/articles/GXwasR_heritability.html)
 
 ### 🔗 Meta Analysis & Correlation
 
