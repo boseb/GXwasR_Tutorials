@@ -46,9 +46,9 @@ Welcome to the GXwasR tutorial hub — a central location for learning how to us
 
 ### 🧠 Polygenic Score
 
-* [Polygenic Score (PRS)](https://boseb.github.io/GXwasR/articles/GXwasR_PGS.html)
+* [Polygenic Score (PGS)](https://boseb.github.io/GXwasR/articles/GXwasR_PGS.html)
   
-  Calculating and interpreting PRS using summary stats and genotype data.
+  Calculating and interpreting PGS using summary stats and genotype data.
 
 ### 🌍 Ancestry & Population Structure
 
