@@ -44,9 +44,9 @@ Welcome to the GXwasR tutorial hub — a central location for learning how to us
   
   Running association models using GXwasR.
 
-### 🧠 Polygenic Risk
+### 🧠 Polygenic Score
 
-* [Polygenic Risk Score (PRS)](https://boseb.github.io/GXwasR/articles/GXwasR_PRS.html)
+* [Polygenic Score (PRS)](https://boseb.github.io/GXwasR/articles/GXwasR_PGS.html)
   
   Calculating and interpreting PRS using summary stats and genotype data.
 
@@ -55,6 +55,8 @@ Welcome to the GXwasR tutorial hub — a central location for learning how to us
 * [Ancestry Estimation](https://boseb.github.io/GXwasR/articles/decoding_ancestry.html)
   
   Estimate population structure using reference panels and PCA/SVD.
+
+* - [Heritability Estimation](https://boseb.github.io/GXwasR/articles/GXwasR_heritability.html)
 
 ### 🔗 Meta Analysis & Correlation
 
